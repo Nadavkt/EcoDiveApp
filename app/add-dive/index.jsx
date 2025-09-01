@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import Fontisto from '@expo/vector-icons/Fontisto';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function AddDive() {
@@ -20,7 +22,7 @@ export default function AddDive() {
           style={styles.optionButton}
           onPress={() => handleDiveTypeSelect('free')}
         >
-          <Ionicons name="water" size={48} color="#2A9D8F" />
+          <Fontisto name="snorkel" size={48} color="#2A9D8F" />
           <Text style={styles.optionText}>Free Dive</Text>
           <Text style={styles.optionSubtext}>Record your free diving experience</Text>
         </TouchableOpacity>
@@ -29,7 +31,7 @@ export default function AddDive() {
           style={styles.optionButton}
           onPress={() => handleDiveTypeSelect('scuba')}
         >
-          <Ionicons name="airplane" size={48} color="#2A9D8F" />
+          <MaterialIcons name="scuba-diving" size={48} color="#2A9D8F" />
           <Text style={styles.optionText}>Scuba Dive</Text>
           <Text style={styles.optionSubtext}>Record your scuba diving experience</Text>
         </TouchableOpacity>

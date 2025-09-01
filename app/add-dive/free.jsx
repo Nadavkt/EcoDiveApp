@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function FreeDiveForm() {
   const router = useRouter();
@@ -15,6 +16,31 @@ export default function FreeDiveForm() {
     depth: '',
     weight: ''
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showSitePicker, setShowSitePicker] = useState(false);
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState(new Date());
+
+  // Predefined list of dive sites
+  const diveSites = [
+    'Great Barrier Reef, Australia',
+    'Blue Hole, Egypt',
+    'Silfra, Iceland',
+    'Barracuda Point, Malaysia',
+    'SS Thistlegorm, Egypt',
+    'Manta Point, Indonesia',
+    'Shark Point, Thailand',
+    'Blue Corner, Palau',
+    'SS Yongala, Australia',
+    'Manta Ray Night Dive, Hawaii',
+    'Cenotes, Mexico',
+    'Galapagos Islands, Ecuador',
+    'Raja Ampat, Indonesia',
+    'Komodo National Park, Indonesia',
+    'Tubbataha Reefs, Philippines',
+    'Other (Custom)'
+  ];
 
   const handleSave = () => {
     // Validate required fields
@@ -33,6 +59,76 @@ export default function FreeDiveForm() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleDateChange = (event, date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      setSelectedDate(date);
+      const formattedDate = date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      updateFormData('date', formattedDate);
+    }
+  };
+
+  const openDatePicker = () => {
+    console.log('Opening date picker...');
+    setShowDatePicker(true);
+  };
+
+  const handleSiteSelect = (site) => {
+    setShowSitePicker(false);
+    if (site === 'Other (Custom)') {
+      // Allow custom input for "Other"
+      Alert.prompt(
+        'Enter Custom Site',
+        'Please enter the name of your dive site:',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'OK', 
+            onPress: (customSite) => {
+              if (customSite && customSite.trim()) {
+                updateFormData('site', customSite.trim());
+              }
+            }
+          }
+        ],
+        'plain-text'
+      );
+    } else {
+      updateFormData('site', site);
+    }
+  };
+
+  const handleDurationChange = (event, time) => {
+    if (Platform.OS === 'android') {
+      setShowDurationPicker(false);
+    }
+    if (time) {
+      setSelectedDuration(time);
+      const hours = time.getHours();
+      const minutes = time.getMinutes();
+      
+      // Check if duration is within 5 hours limit
+      if (hours > 5 || (hours === 5 && minutes > 0)) {
+        Alert.alert('Invalid Duration', 'Duration cannot exceed 5 hours.');
+        return;
+      }
+      
+      const formattedDuration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      updateFormData('duration', formattedDuration);
+    }
+  };
+
+  const openDurationPicker = () => {
+    console.log('Opening duration picker...');
+    setShowDurationPicker(true);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -46,13 +142,12 @@ export default function FreeDiveForm() {
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.formGroup}>
           <Text style={styles.label}>Date *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.date}
-            onChangeText={(text) => updateFormData('date', text)}
-            placeholder="Enter dive date"
-            placeholderTextColor="#999"
-          />
+          <TouchableOpacity style={styles.dateInput} onPress={openDatePicker}>
+            <Text style={formData.date ? styles.dateText : styles.placeholderText}>
+              {formData.date || 'Select dive date'}
+            </Text>
+            <Ionicons name="calendar" size={20} color="#666" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formGroup}>
@@ -80,13 +175,12 @@ export default function FreeDiveForm() {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Site *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.site}
-            onChangeText={(text) => updateFormData('site', text)}
-            placeholder="Enter dive site"
-            placeholderTextColor="#999"
-          />
+          <TouchableOpacity style={styles.siteInput} onPress={() => setShowSitePicker(true)}>
+            <Text style={formData.site ? styles.siteText : styles.placeholderText}>
+              {formData.site || 'Select dive site'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#666" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formGroup}>
@@ -103,15 +197,13 @@ export default function FreeDiveForm() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Duration (minutes)</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.duration}
-            onChangeText={(text) => updateFormData('duration', text)}
-            placeholder="Enter duration in minutes"
-            placeholderTextColor="#999"
-            keyboardType="numeric"
-          />
+          <Text style={styles.label}>Duration (up to 5 hours)</Text>
+          <TouchableOpacity style={styles.durationInput} onPress={openDurationPicker}>
+            <Text style={formData.duration ? styles.durationText : styles.placeholderText}>
+              {formData.duration || 'Select duration'}
+            </Text>
+            <Ionicons name="time" size={20} color="#666" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formGroup}>
@@ -142,6 +234,113 @@ export default function FreeDiveForm() {
           <Text style={styles.saveButtonText}>Save Free Dive</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={showDatePicker}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.modalButton}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Select Date</Text>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.modalButton}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )
+      )}
+
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={showDurationPicker}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowDurationPicker(false)}>
+                  <Text style={styles.modalButton}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Select Duration</Text>
+                <TouchableOpacity onPress={() => setShowDurationPicker(false)}>
+                  <Text style={styles.modalButton}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDuration}
+                mode="time"
+                display="spinner"
+                onChange={handleDurationChange}
+                is24Hour={true}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        showDurationPicker && (
+          <DateTimePicker
+            value={selectedDuration}
+            mode="time"
+            display="default"
+            onChange={handleDurationChange}
+            is24Hour={true}
+          />
+        )
+      )}
+
+      <Modal
+        visible={showSitePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSitePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Dive Site</Text>
+              <TouchableOpacity onPress={() => setShowSitePicker(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.siteList}>
+              {diveSites.map((site, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.siteOption}
+                  onPress={() => handleSiteSelect(site)}
+                >
+                  <Text style={styles.siteOptionText}>{site}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -196,6 +395,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  dateInput: {
+    backgroundColor: '#ffff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  siteInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  durationInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  siteText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  durationText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999',
+  },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
@@ -217,5 +465,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalButton: {
+    fontSize: 16,
+    color: '#2A9D8F',
+    fontWeight: '600',
+  },
+  siteList: {
+    padding: 20,
+  },
+  siteOption: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  siteOptionText: {
+    fontSize: 16,
+    color: '#333',
   },
 });
