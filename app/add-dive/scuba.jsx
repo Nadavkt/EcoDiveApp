@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#2A9D8F',
+    backgroundColor: '#4cc5ff',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',

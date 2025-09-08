@@ -22,7 +22,7 @@ export default function AddDive() {
           style={styles.optionButton}
           onPress={() => handleDiveTypeSelect('free')}
         >
-          <Fontisto name="snorkel" size={48} color="#2A9D8F" />
+          <Fontisto name="snorkel" size={48} color="#4cc5ff" />
           <Text style={styles.optionText}>Free Dive</Text>
           <Text style={styles.optionSubtext}>Record your free diving experience</Text>
         </TouchableOpacity>
@@ -31,7 +31,7 @@ export default function AddDive() {
           style={styles.optionButton}
           onPress={() => handleDiveTypeSelect('scuba')}
         >
-          <MaterialIcons name="scuba-diving" size={48} color="#2A9D8F" />
+          <MaterialIcons name="scuba-diving" size={48} color="#4cc5ff" />
           <Text style={styles.optionText}>Scuba Dive</Text>
           <Text style={styles.optionSubtext}>Record your scuba diving experience</Text>
         </TouchableOpacity>

@@ -29,7 +29,7 @@ export default function RootLayout() {
         tabBarIcon: ({ color, size, focused }) => (
           <CustomTabBarIcon route={route} color={color} size={size} focused={focused} />
         ),
-        tabBarActiveTintColor: '#1F7A8C',
+        tabBarActiveTintColor: '#4cc5ff',
         tabBarInactiveTintColor: '#3A506B',
         tabBarLabelStyle: { fontSize: 11 },
         headerTitleAlign: 'center',
@@ -71,7 +71,7 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   addButton: {
-    backgroundColor: '#2A9D8F',
+    backgroundColor: '#4cc5ff',
     borderRadius: 34,
     width: 68,
     height: 68,
