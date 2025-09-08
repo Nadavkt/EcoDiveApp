@@ -6,12 +6,12 @@ import { View, StyleSheet, Image } from 'react-native';
 const CustomTabBarIcon = ({ route, color, size, focused }) => {
   let icon = 'ellipse';
   if (route.name === 'index') icon = 'home';
-  if (route.name === 'diveai') icon = 'chatbubbles';
-  if (route.name === 'add-dive') icon = 'add-circle';
-  if (route.name === 'divelog') icon = 'book';
-  if (route.name === 'more') icon = 'ellipsis-horizontal';
+  if (route.name === 'Dive-AI/index') icon = 'chatbubbles';
+  if (route.name === 'Add-Dive') icon = 'add-circle';
+  if (route.name === 'Dive-Log/index') icon = 'book';
+  if (route.name === 'More/index') icon = 'ellipsis-horizontal';
 
-  if (route.name === 'add-dive') {
+  if (route.name === 'Add-Dive') {
     return (
       <View style={styles.addButton}>
         <Ionicons name={icon} size={size + 10} color={'#FFFFFF'} />
@@ -53,9 +53,9 @@ export default function RootLayout() {
       })}
     >
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarLabel: 'Home' }} />
-      <Tabs.Screen name="diveai" options={{ title: 'DiveAI', tabBarLabel: 'DiveAI' }} />
+      <Tabs.Screen name="Dive-AI/index" options={{ title: 'DiveAI', tabBarLabel: 'DiveAI' }} />
       <Tabs.Screen 
-        name="add-dive" 
+        name="Add-Dive" 
         options={{ 
           title: 'Add Dive', 
           tabBarLabel: 'Add Dive',
@@ -63,8 +63,8 @@ export default function RootLayout() {
           tabBarLabelStyle: { marginTop: 16 }
         }} 
       />
-      <Tabs.Screen name="divelog" options={{ title: 'Dive Log', tabBarLabel: 'Dive Log' }} />
-      <Tabs.Screen name="more" options={{ title: 'More', tabBarLabel: 'More' }} />
+      <Tabs.Screen name="Dive-Log/index" options={{ title: 'Dive Log', tabBarLabel: 'Dive Log' }} />
+      <Tabs.Screen name="More/index" options={{ title: 'More', tabBarLabel: 'More' }} />
     </Tabs>
   );
 }

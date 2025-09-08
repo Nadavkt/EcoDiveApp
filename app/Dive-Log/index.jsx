@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { diveLogs } from './data/diveLogs';
+import { diveLogs } from './diveLogs';
 
 const colors = {
   bg: '#F6F7FB',
