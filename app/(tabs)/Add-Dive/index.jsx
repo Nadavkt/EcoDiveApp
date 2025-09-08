@@ -9,7 +9,7 @@ export default function AddDive() {
   const router = useRouter();
 
   const handleDiveTypeSelect = (type) => {
-    router.push(`/add-dive/${type}`);
+    router.push(`/(tabs)/Add-Dive/${type}`);
   };
 
   return (
