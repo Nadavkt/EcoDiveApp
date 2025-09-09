@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 export default function ScubaDiveForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    diveType: 'Scuba Dive',
     date: '',
     diveNumber: '',
     bodyDiver: '',
@@ -140,6 +141,17 @@ export default function ScubaDiveForm() {
       </View>
 
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Dive Type</Text>
+          <TextInput
+            style={[styles.input, styles.disabledInput]}
+            value={formData.diveType}
+            editable={false}
+            placeholder="Dive Type"
+            placeholderTextColor="#999"
+          />
+        </View>
+
         <View style={styles.formGroup}>
           <Text style={styles.label}>Date *</Text>
           <TouchableOpacity style={styles.dateInput} onPress={openDatePicker}>
@@ -394,6 +406,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#333',
+  },
+  disabledInput: {
+    backgroundColor: '#F9FAFB',
+    color: '#6B7280',
+    borderColor: '#D1D5DB',
   },
   dateInput: {
     backgroundColor: '#FFFFFF',

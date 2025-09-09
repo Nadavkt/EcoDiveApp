@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 export default function FreeDiveForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    diveType: 'Free Dive',
     date: '',
     diveNumber: '',
     bodyDiver: '',
@@ -140,6 +141,17 @@ export default function FreeDiveForm() {
       </View>
 
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Dive Type</Text>
+          <TextInput
+            style={[styles.input, styles.disabledInput]}
+            value={formData.diveType}
+            editable={false}
+            placeholder="Dive Type"
+            placeholderTextColor="#999"
+          />
+        </View>
+
         <View style={styles.formGroup}>
           <Text style={styles.label}>Date *</Text>
           <TouchableOpacity style={styles.dateInput} onPress={openDatePicker}>
@@ -395,6 +407,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  disabledInput: {
+    backgroundColor: '#F9FAFB',
+    color: '#6B7280',
+    borderColor: '#D1D5DB',
+  },
   dateInput: {
     backgroundColor: '#ffff',
     borderWidth: 1,
@@ -449,7 +466,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#2A9D8F',
+    backgroundColor: '#4cc5ff',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',

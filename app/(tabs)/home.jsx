@@ -84,7 +84,7 @@ export default function Home() {
         </View>
         <View style={styles.statusRow}>
           <Text style={styles.statusKey}>Expiry Insurance Date:</Text>
-          <Text style={styles.statusVal}>2025-12-31</Text>
+          <Text style={styles.statusVal}>31/12/2025</Text>
         </View>
         <View style={[styles.statusRow, { marginTop: 6 }]}>
           <Text style={styles.statusKey}>Status:</Text>

@@ -15,6 +15,19 @@ const colors = {
 
 export default function DiveLog() {
   const router = useRouter();
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -30,11 +43,11 @@ export default function DiveLog() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 24 }}
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => router.push(`/divelog/${item.id}`)}>
+          <Pressable style={styles.card} onPress={() => router.push(`/(tabs)/Dive-Log/diveid?id=${item.id}`)}>
             <Image source={{ uri: item.image }} style={styles.cardImage} />
 
             <View style={styles.cardBody}>
-              <Text style={styles.date}>{item.date}</Text>
+              <Text style={styles.date}>{formatDate(item.date)}</Text>
 
               <View style={styles.row}> 
                 <Ionicons name="location-outline" size={16} color={colors.slate} style={{ marginRight: 6 }} />

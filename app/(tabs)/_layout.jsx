@@ -8,7 +8,7 @@ const CustomTabBarIcon = ({ route, color, size, focused }) => {
   if (route.name === 'home') icon = 'home';
   if (route.name === 'Dive-AI/index') icon = 'chatbubbles';
   if (route.name === 'Add-Dive') icon = 'add-circle';
-  if (route.name === 'Dive-Log/index') icon = 'book';
+  if (route.name === 'Dive-Log') icon = 'book';
   if (route.name === 'More/index') icon = 'ellipsis-horizontal';
 
   if (route.name === 'Add-Dive') {
@@ -63,7 +63,7 @@ export default function TabsLayout() {
           tabBarLabelStyle: { marginTop: 16 }
         }} 
       />
-      <Tabs.Screen name="Dive-Log/index" options={{ title: 'Dive Log', tabBarLabel: 'Dive Log' }} />
+      <Tabs.Screen name="Dive-Log" options={{ title: 'Dive Log', tabBarLabel: 'Dive Log' }} />
       <Tabs.Screen name="More/index" options={{ title: 'More', tabBarLabel: 'More' }} />
     </Tabs>
   );

@@ -1,17 +1,15 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 
-export default function AuthLayout() {
+export default function DiveLogLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
       }}
     >
-      <Stack.Screen name="preOpen" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="diveid" />
     </Stack>
   );
 }
-
