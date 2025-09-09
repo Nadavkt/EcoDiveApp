@@ -23,7 +23,7 @@ export default function Launch() {
         <View style={styles.content}>
           <Text style={styles.titleLine}>One small step for Humanity</Text>
           <Text style={[styles.titleLine, { marginTop: 6 }]}>One big step for the</Text>
-          <Text style={[styles.titleLine, { marginTop: 6 }]}>enviorment</Text>
+          <Text style={[styles.titleLine, { marginTop: 6 }]}>Enviorment</Text>
 
           <TouchableOpacity activeOpacity={0.8} style={styles.cta} onPress={handleGetStarted}>
             <Text style={styles.ctaText}>Get Started</Text>

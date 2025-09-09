@@ -16,6 +16,7 @@ export default function Register() {
   const [profileImage, setProfileImage] = useState(null);
   const [licenseFront, setLicenseFront] = useState(null);
   const [licenseBack, setLicenseBack] = useState(null);
+  const [insuranceConfirmation, setInsuranceConfirmation] = useState(null);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -28,7 +29,7 @@ export default function Register() {
 
   const onRegister = () => {
     // TODO: implement registration logic with all form data
-    console.log('Registration data:', { ...formData, profileImage, licenseFront, licenseBack });
+    console.log('Registration data:', { ...formData, profileImage, licenseFront, licenseBack, insuranceConfirmation });
     router.replace('/(auth)/login');
   };
 
@@ -83,6 +84,21 @@ export default function Register() {
               )}
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Insurance Confirmation */}
+        <View style={styles.imageSection}>
+          <Text style={styles.sectionLabel}>Insurance Confirmation</Text>
+          <TouchableOpacity style={styles.licenseUploadBtn} onPress={() => handleImageUpload('Insurance Confirmation')}>
+            {insuranceConfirmation ? (
+              <Image source={{ uri: insuranceConfirmation }} style={styles.licenseImage} />
+            ) : (
+              <View style={styles.licensePlaceholder}>
+                <Ionicons name="document-text" size={20} color="#9CA3AF" />
+                <Text style={styles.licenseText}>Upload Confirmation</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Personal Information */}
