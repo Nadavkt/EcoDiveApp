@@ -1,14 +1,14 @@
 // Minimal API helpers for JSON and multipart requests
 // Configure your API base URL via EXPO_PUBLIC_API_URL; fallback to local dev server
 
-const BASE_URL = 'https://5e6766f98059.ngrok-free.app'; // Hardcoded for testing
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://disastrous-trussed-lizabeth.ngrok-free.app';
 
 // Debug logging
 console.log('=== API CONFIGURATION ===');
 console.log('API Base URL:', BASE_URL);
 console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
-console.log('Expected URL: https://5e6766f98059.ngrok-free.app');
-console.log('URLs match:', BASE_URL === 'https://5e6766f98059.ngrok-free.app');
+console.log('Expected URL: https://disastrous-trussed-lizabeth.ngrok-free.app');
+console.log('URLs match:', BASE_URL === 'https://disastrous-trussed-lizabeth.ngrok-free.app');
 console.log('========================');
 
 async function requestJson(path, options = {}) {
