@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import 'react-native-get-random-values';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import bcrypt from 'bcryptjs';
+import { saveUser, sendRegistrationEmail } from '../../services/api';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function Register() {
   const router = useRouter();
+  const scrollRef = useRef(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -22,15 +28,165 @@ export default function Register() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUpload = (type) => {
-    // TODO: Implement actual image picker functionality
-    Alert.alert('Image Upload', `${type} upload functionality will be implemented`);
+  const requestMediaPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'We need access to your photos to continue.');
+      return false;
+    }
+    return true;
   };
 
-  const onRegister = () => {
-    // TODO: implement registration logic with all form data
-    console.log('Registration data:', { ...formData, profileImage, licenseFront, licenseBack, insuranceConfirmation });
-    router.replace('/(auth)/login');
+  const pickImage = async () => {
+    const ok = await requestMediaPermission();
+    if (!ok) return null;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8
+    });
+    if (res.canceled) return null;
+    const asset = res.assets && res.assets[0];
+    return asset?.uri || null;
+  };
+
+  const requestCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'We need access to your camera to continue.');
+      return false;
+    }
+    return true;
+  };
+
+  const takePhoto = async () => {
+    const ok = await requestCameraPermission();
+    if (!ok) return null;
+    const res = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8
+    });
+    if (res.canceled) return null;
+    const asset = res.assets && res.assets[0];
+    return asset?.uri || null;
+  };
+
+  const pickDocument = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      type: ['image/*', 'application/pdf'],
+      multiple: false,
+      copyToCacheDirectory: true
+    });
+    if (res.canceled) return null;
+    const file = res.assets && res.assets[0];
+    return file?.uri || null;
+  };
+
+  const isImageUri = (uri) => typeof uri === 'string' && /(\.png|\.jpg|\.jpeg|\.heic|\.webp)$/i.test(uri);
+
+  const handleImageUpload = async (type) => {
+    try {
+      const chooseAndSet = async (setter) => {
+        Alert.alert(
+          'Select source',
+          'Choose how to upload the image',
+          [
+            { text: 'Camera', onPress: async () => { const uri = await takePhoto(); if (uri) setter(uri); } },
+            { text: 'Photo Library', onPress: async () => { const uri = await pickImage(); if (uri) setter(uri); } },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+      };
+
+      if (type === 'Profile') return chooseAndSet(setProfileImage);
+      if (type === 'License Front') return chooseAndSet(setLicenseFront);
+      if (type === 'License Back') return chooseAndSet(setLicenseBack);
+      if (type === 'Insurance Confirmation') {
+        Alert.alert(
+          'Select source',
+          'Choose how to upload confirmation',
+          [
+            { text: 'Photo Library', onPress: async () => { const uri = await pickImage(); if (uri) setInsuranceConfirmation(uri); } },
+            { text: 'Files (PDF/Image)', onPress: async () => { const uri = await pickDocument(); if (uri) setInsuranceConfirmation(uri); } },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Upload failed', 'Could not select the file. Please try again.');
+    }
+  };
+
+  const scrollToEnd = () => {
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+  };
+
+  const onRegister = async () => {
+    try {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.idNumber || !formData.password || !formData.confirmPassword) {
+        Alert.alert('Missing fields', 'Please complete all required fields.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        Alert.alert('Password mismatch', 'Passwords do not match.');
+        return;
+      }
+
+      // 1-2) Hash password and save user (excluding insurance confirmation file) to DB
+      const salt = bcrypt.genSaltSync(10);
+      const passwordHash = bcrypt.hashSync(formData.password, salt);
+
+      const userPayload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        idNumber: formData.idNumber,
+        passwordHash,
+        // send references/URIs of images as metadata if backend supports it
+        profileImage: profileImage || null,
+        licenseFront: licenseFront || null,
+        licenseBack: licenseBack || null
+      };
+
+      // Save user to database
+      const saved = await saveUser(userPayload);
+
+      // 3) Send email with all data INCLUDING images/files
+      try {
+        console.log('Sending registration email...');
+        const toEmail = process.env.EXPO_PUBLIC_REGISTRATION_EMAIL || 'ecodive09@gmail.com';
+        await sendRegistrationEmail({
+          fields: {
+            ...userPayload,
+            insuranceConfirmationIncluded: Boolean(insuranceConfirmation),
+            toEmail
+          },
+          files: {
+            profileImage: profileImage ? { uri: profileImage } : null,
+            licenseFront: licenseFront ? { uri: licenseFront } : null,
+            licenseBack: licenseBack ? { uri: licenseBack } : null,
+            insuranceConfirmation: insuranceConfirmation ? { uri: insuranceConfirmation } : null
+          }
+        });
+        console.log('Email sent successfully!');
+        
+        // 4) Success -> brief message then navigate to home
+        Alert.alert('Success', 'Registered successfully!', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
+        ]);
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        // Still show success since user was created
+        Alert.alert('Registration Complete', 'User created successfully! (Email may have failed)', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Registration failed', err.message || 'Please try again later.');
+    }
   };
 
   const onBackToLogin = () => {
@@ -38,7 +194,8 @@ export default function Register() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.select({ ios: 80, android: 0 })}>
+    <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.centerContent}>
         <Text style={styles.title}>Create your{`\n`}account</Text>
         <Text style={styles.subtitle}>Join EcoDive and start tracking your dives</Text>
@@ -91,7 +248,14 @@ export default function Register() {
           <Text style={styles.sectionLabel}>Insurance Confirmation</Text>
           <TouchableOpacity style={styles.licenseUploadBtn} onPress={() => handleImageUpload('Insurance Confirmation')}>
             {insuranceConfirmation ? (
-              <Image source={{ uri: insuranceConfirmation }} style={styles.licenseImage} />
+              isImageUri(insuranceConfirmation) ? (
+                <Image source={{ uri: insuranceConfirmation }} style={styles.licenseImage} />
+              ) : (
+                <View style={styles.licensePlaceholder}>
+                  <Ionicons name="document-text" size={20} color="#9CA3AF" />
+                  <Text style={styles.licenseText}>File attached</Text>
+                </View>
+              )
             ) : (
               <View style={styles.licensePlaceholder}>
                 <Ionicons name="document-text" size={20} color="#9CA3AF" />
@@ -144,6 +308,7 @@ export default function Register() {
           placeholderTextColor="#9CA3AF"
           value={formData.password}
           onChangeText={(value) => handleInputChange('password', value)}
+          onFocus={scrollToEnd}
           secureTextEntry
         />
 
@@ -153,6 +318,7 @@ export default function Register() {
           placeholderTextColor="#9CA3AF"
           value={formData.confirmPassword}
           onChangeText={(value) => handleInputChange('confirmPassword', value)}
+          onFocus={scrollToEnd}
           secureTextEntry
         />
 
@@ -165,6 +331,7 @@ export default function Register() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -29,6 +29,10 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://5e6766f98059.ngrok-free.app",
+      "EXPO_PUBLIC_REGISTRATION_EMAIL": "ecodive09@gmail.com"
+    }
   }
 }
