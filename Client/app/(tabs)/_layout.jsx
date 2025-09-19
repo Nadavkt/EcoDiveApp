@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Image } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CustomTabBarIcon = ({ route, color, size, focused }) => {
   let icon = 'ellipse';
@@ -23,6 +24,8 @@ const CustomTabBarIcon = ({ route, color, size, focused }) => {
 };
 
 export default function TabsLayout() {
+  const { user } = useAuth();
+  
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -36,7 +39,9 @@ export default function TabsLayout() {
         headerTitle: route.name === 'home' ? 'EcoDive' : undefined,
         headerRight: () => (
           <Image
-            source={{ uri: 'https://i.pravatar.cc/100?img=12' }}
+            source={{ 
+              uri: user?.profile_image || 'https://i.pravatar.cc/100?img=12' 
+            }}
             style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12, borderWidth: 2, borderColor: '#A8DADC' }}
           />
         ),

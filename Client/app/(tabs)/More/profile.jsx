@@ -2,9 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function Profile() {
   const router = useRouter();
+  const { user, logout } = useAuth();
+  
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)/login');
+  };
+  
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.headerBar}>
@@ -15,9 +23,18 @@ export default function Profile() {
         <View style={{ width: 40 }} />
       </View>
       <View style={styles.header}>
-        <Image source={{ uri: 'https://i.pravatar.cc/200?img=12' }} style={styles.avatar} />
-        <Text style={styles.name}>Nadav Kantor</Text>
-        <Text style={styles.email}>nadav@example.com</Text>
+        <Image 
+          source={{ 
+            uri: user?.profile_image || 'https://i.pravatar.cc/200?img=12' 
+          }} 
+          style={styles.avatar} 
+        />
+        <Text style={styles.name}>
+          {user ? `${user.first_name} ${user.last_name}` : 'Guest User'}
+        </Text>
+        <Text style={styles.email}>
+          {user?.email || 'No email available'}
+        </Text>
       </View>
 
       <View style={styles.card}>
@@ -40,7 +57,7 @@ export default function Profile() {
         <TouchableOpacity style={styles.actionRow}>
           <Text style={styles.actionText}>Change Password</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionRow}>
+        <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
           <Text style={[styles.actionText, { color: '#E11D48' }]}>Log Out</Text>
         </TouchableOpacity>
       </View>

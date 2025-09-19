@@ -106,9 +106,17 @@ export async function sendRegistrationEmail(payload) {
   return requestMultipart('/emails/registration', form);
 }
 
+export async function loginUser(credentials) {
+  return requestJson('/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials)
+  });
+}
+
 export default {
   saveUser,
-  sendRegistrationEmail
+  sendRegistrationEmail,
+  loginUser
 };
 
 

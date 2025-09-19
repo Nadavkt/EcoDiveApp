@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
 const { getPool } = require('../db');
 const { z } = require('zod');
 
@@ -148,6 +149,53 @@ router.post('/emails/registration', upload.fields([
   } catch (err) {
     console.error('Email sending error:', err);
     res.status(400).json({ message: err.message || 'Failed to send email' });
+  }
+});
+
+// POST /login - Authenticate user
+const loginSchema = z.object({
+  idNumber: z.string().min(1),
+  password: z.string().min(1)
+});
+
+router.post('/login', async (req, res) => {
+  try {
+    console.log('Login attempt:', { idNumber: req.body.idNumber });
+    const parsed = loginSchema.parse(req.body);
+    const { idNumber, password } = parsed;
+    
+    // Find user by ID number
+    const result = await pool.query(
+      'SELECT id, first_name, last_name, email, id_number, password, profile_image, license_front, license_back, created_at FROM users WHERE id_number = $1',
+      [idNumber]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const user = result.rows[0];
+    
+    // Verify password with bcrypt
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+    
+    console.log('Login successful for user:', user.id);
+    res.json({ 
+      success: true, 
+      user: userWithoutPassword,
+      message: 'Login successful'
+    });
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(400).json({ message: err.message || 'Login failed' });
   }
 });
 

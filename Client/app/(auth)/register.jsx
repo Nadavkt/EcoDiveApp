@@ -7,9 +7,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Register() {
   const router = useRouter();
+  const { login } = useAuth();
   const scrollRef = useRef(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -152,6 +154,20 @@ export default function Register() {
 
       // Save user to database
       const saved = await saveUser(userPayload);
+
+      // Store user data in context for immediate profile display
+      const userData = {
+        id: saved.id,
+        first_name: saved.first_name,
+        last_name: saved.last_name,
+        email: saved.email,
+        id_number: saved.id_number,
+        profile_image: saved.profile_image,
+        license_front: saved.license_front,
+        license_back: saved.license_back,
+        created_at: saved.created_at
+      };
+      login(userData);
 
       // 3) Send email with all data INCLUDING images/files
       try {
