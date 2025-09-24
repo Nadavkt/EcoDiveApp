@@ -12,7 +12,9 @@ app.use(express.json({ limit: '10mb' }));
 
 // Routes
 const registerRoutes = require('./routes/register');
+const diveRoutes = require('./routes/dives');
 app.use('/', registerRoutes);
+app.use('/', diveRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAuth } from '../../../contexts/AuthContext';
+import { createDive } from '../../../services/api';
 
 export default function ScubaDiveForm() {
   const router = useRouter();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     diveType: 'Scuba Dive',
     date: '',
@@ -15,7 +18,8 @@ export default function ScubaDiveForm() {
     description: '',
     duration: '',
     depth: '',
-    weight: ''
+    weight: '',
+    conditions: []
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -43,17 +47,43 @@ export default function ScubaDiveForm() {
     'Other (Custom)'
   ];
 
-  const handleSave = () => {
-    // Validate required fields
-    if (!formData.date || !formData.diveNumber || !formData.site) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
-      return;
+  const handleSave = async () => {
+    try {
+      if (!formData.date || !formData.site) {
+        Alert.alert('Missing Information', 'Please fill in date and site.');
+        return;
+      }
+      if (!user?.id_number) {
+        Alert.alert('Not logged in', 'Please log in again.');
+        return;
+      }
+      // Convert DD/MM/YYYY to ISO
+      const [day, month, year] = String(formData.date).split('/');
+      // Use date-only string to avoid timezone shifts (YYYY-MM-DD)
+      const dateOnly = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      const payload = {
+        idNumber: user.id_number,
+        diveDate: dateOnly,
+        diveType: 'scuba',
+        site: formData.site,
+        maxDepthM: formData.depth ? Number(formData.depth) : null,
+        durationMin: formData.duration ? parseInt(formData.duration.split(':')[0], 10) * 60 + parseInt(formData.duration.split(':')[1] || '0', 10) : null,
+        weightsKg: formData.weight ? Number(formData.weight) : null,
+        bodyDiver: formData.bodyDiver || null,
+        description: formData.description || null,
+        diveNumber: formData.diveNumber ? Number(formData.diveNumber) : undefined,
+        conditions: formData.conditions
+      };
+
+      const saved = await createDive(payload);
+      Alert.alert('Success', 'Scuba dive saved!', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } catch (e) {
+      console.error('Save dive failed', e);
+      Alert.alert('Save failed', e?.message || 'Could not save dive.');
     }
-    
-    // Here you would typically save the data
-    Alert.alert('Success', 'Scuba dive saved successfully!', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
   };
 
   const updateFormData = (field, value) => {
@@ -240,6 +270,36 @@ export default function ScubaDiveForm() {
             placeholderTextColor="#999"
             keyboardType="numeric"
           />
+        </View>
+
+        {/* Conditions tags */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Conditions</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {['Current', 'Waves', 'Drift', 'Night', 'Cold', 'Shore', 'Boat'].map((tag) => {
+              const selected = formData.conditions.includes(tag);
+              return (
+                <TouchableOpacity
+                  key={tag}
+                  onPress={() => {
+                    const set = new Set(formData.conditions);
+                    if (set.has(tag)) set.delete(tag); else set.add(tag);
+                    updateFormData('conditions', Array.from(set));
+                  }}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: selected ? '#4cc5ff' : '#E5E7EB',
+                    backgroundColor: selected ? '#E0F6FF' : '#FFFFFF'
+                  }}
+                >
+                  <Text style={{ color: selected ? '#0B132B' : '#333', fontWeight: '600' }}>{tag}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>

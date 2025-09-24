@@ -1,14 +1,14 @@
 // Minimal API helpers for JSON and multipart requests
 // Configure your API base URL via EXPO_PUBLIC_API_URL; fallback to local dev server
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://disastrous-trussed-lizabeth.ngrok-free.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://243124082c75.ngrok-free.app';
 
 // Debug logging
 console.log('=== API CONFIGURATION ===');
 console.log('API Base URL:', BASE_URL);
 console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
-console.log('Expected URL: https://disastrous-trussed-lizabeth.ngrok-free.app');
-console.log('URLs match:', BASE_URL === 'https://disastrous-trussed-lizabeth.ngrok-free.app');
+console.log('Expected URL: https://243124082c75.ngrok-free.app');
+console.log('URLs match:', BASE_URL === 'https://243124082c75.ngrok-free.app');
 console.log('========================');
 
 async function requestJson(path, options = {}) {
@@ -113,10 +113,26 @@ export async function loginUser(credentials) {
   });
 }
 
+export async function getUserDives(idNumber) {
+  const query = encodeURIComponent(String(idNumber || ''));
+  return requestJson(`/dives?idNumber=${query}`, {
+    method: 'GET'
+  });
+}
+
+export async function createDive(payload) {
+  return requestJson('/dives', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
 export default {
   saveUser,
   sendRegistrationEmail,
-  loginUser
+  loginUser,
+  getUserDives,
+  createDive
 };
 
 
