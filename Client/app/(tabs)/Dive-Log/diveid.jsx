@@ -16,12 +16,20 @@ const colors = {
 
 export default function DiveDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const dive = getDiveById(id);
+  const { id, dive: diveParam } = useLocalSearchParams();
+  let dive = null;
+  if (diveParam) {
+    try { dive = JSON.parse(diveParam); } catch {}
+  }
+  if (!dive) {
+    dive = getDiveById(id);
+  }
 
   const formatDate = (dateString) => {
     try {
-      const date = new Date(dateString);
+      const s = String(dateString);
+      // handle YYYY-MM-DD without timezone shift
+      const date = s.length === 10 ? new Date(`${s}T00:00:00`) : new Date(s);
       const day = date.getDate().toString().padStart(2, '0');
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const year = date.getFullYear();
@@ -48,6 +56,15 @@ export default function DiveDetail() {
     );
   }
 
+function safeJsonArray(text) {
+  try {
+    const v = JSON.parse(text);
+    return Array.isArray(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -59,31 +76,34 @@ export default function DiveDetail() {
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Dive Image */}
-        <Image source={{ uri: dive.image }} style={styles.diveImage} />
+        {/* Dive Image or placeholder icon */}
+        {dive?.image ? (
+          <Image source={{ uri: dive.image }} style={styles.diveImage} />
+        ) : (
+          <View style={[styles.diveImage, styles.noImagePlaceholder]}>
+            <Ionicons name="image-outline" size={96} color={colors.slate} />
+            <Text style={{ color: colors.slate, marginTop: 8, fontWeight: '800', fontSize: 14 }}>No image</Text>
+          </View>
+        )}
 
         {/* Main Info Card */}
         <View style={styles.mainCard}>
-          <Text style={styles.diveDate}>{formatDate(dive.date)}</Text>
-          <Text style={styles.location}>{dive.location}</Text>
+          <Text style={styles.diveDate}>{formatDate(dive.dive_date || dive.date)}</Text>
+          <Text style={styles.location}>{dive.dive_site || dive.site || dive.location}</Text>
           
           {/* Dive Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Ionicons name="water-outline" size={20} color={colors.ocean} />
-              <Text style={styles.statValue}>{dive.depthMeters}m</Text>
+              <Text style={styles.statValue}>{(dive.depth ?? dive.max_depth_m ?? dive.depthMeters) || 0}m</Text>
               <Text style={styles.statLabel}>Depth</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="time-outline" size={20} color={colors.ocean} />
-              <Text style={styles.statValue}>{dive.durationMinutes}min</Text>
+              <Text style={styles.statValue}>{(dive.duration ?? dive.duration_min ?? dive.durationMinutes) || 0}min</Text>
               <Text style={styles.statLabel}>Duration</Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="thermometer-outline" size={20} color={colors.ocean} />
-              <Text style={styles.statValue}>{dive.temperatureC}°C</Text>
-              <Text style={styles.statLabel}>Temperature</Text>
-            </View>
+            {/* Temperature not in current schema */}
           </View>
         </View>
 
@@ -91,31 +111,30 @@ export default function DiveDetail() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dive Conditions</Text>
           <View style={styles.conditionsContainer}>
-            {dive.conditions.map((condition, index) => (
-              <View key={index} style={styles.conditionTag}>
-                <Text style={styles.conditionText}>{condition}</Text>
-              </View>
-            ))}
+            {(() => {
+              const cond = dive.conditions;
+              const arr = Array.isArray(cond)
+                ? cond
+                : (typeof cond === 'string' ? (safeJsonArray(cond) || [cond]) : []);
+              return arr.map((condition, index) => (
+                <View key={index} style={styles.conditionTag}>
+                  <Text style={styles.conditionText}>{String(condition)}</Text>
+                </View>
+              ));
+            })()}
           </View>
         </View>
 
         {/* Notes Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dive Notes</Text>
-          <Text style={styles.notesText}>{dive.notes}</Text>
+          <Text style={styles.notesText}>{dive.description || dive.notes || '—'}</Text>
         </View>
 
         {/* Confirmation Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dive Confirmation</Text>
-          <View style={styles.confirmationRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.ocean} style={{ marginRight: 8 }} />
-            <Text style={styles.confirmationText}>Confirmed by: {dive.confirmedBy}</Text>
-          </View>
-          <View style={styles.signatureContainer}>
-            <Text style={styles.signatureLabel}>Digital Signature:</Text>
-            <Image source={{ uri: dive.signatureImage }} style={styles.signatureImage} />
-          </View>
+          <Text style={{ fontWeight: '800', color: colors.ink }}>Feature coming soon</Text>
         </View>
 
         {/* Action Buttons */}
@@ -168,6 +187,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 250,
     resizeMode: 'cover',
+  },
+  noImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
   },
   mainCard: {
     backgroundColor: colors.white,

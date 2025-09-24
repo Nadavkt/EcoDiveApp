@@ -90,7 +90,13 @@ export default function DiveLog() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 24 }}
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => router.push(`/(tabs)/Dive-Log/diveid?id=${item.id}`)}>
+          <Pressable
+            style={styles.card}
+            onPress={() => {
+              const payload = encodeURIComponent(JSON.stringify(item));
+              router.push(`/(tabs)/Dive-Log/diveid?id=${item.id}&dive=${payload}`);
+            }}
+          >
             {!!item.image && <Image source={{ uri: item.image }} style={styles.cardImage} />}
 
             <View style={styles.cardBody}>

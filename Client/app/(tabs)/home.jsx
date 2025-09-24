@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
+import { getUserDives } from '../../services/api';
 
 const c = {
   bg: '#F6F7FB',
@@ -20,23 +22,53 @@ const c = {
   activeGreen: '#10B981'
 };
 
-const tiles = [
-  { label: 'Total Dives', value: '42', icon: 'fish', color: c.tileBlue },
-  { label: 'Deepest Dive', value: '55m', icon: 'trending-up', color: c.tileGreen },
-  { label: 'Total Time', value: '25 hrs', icon: 'time-outline', color: c.tileYellow },
-  { label: 'Locations', value: '8', icon: 'location-outline', color: c.tilePurple }
-];
-
-const latest = [
-  { id: '1', spot: 'Blue Hole, Belize', date: '2023-10-26', minutes: 30 },
-  { id: '2', spot: 'Great Barrier Reef', date: '2023-08-15', minutes: 18 },
-  { id: '3', spot: 'Cenote Dos Ojos', date: '2023-06-01', minutes: 10 }
-];
+function computeStats(dives = []) {
+  const total = dives.length;
+  const deepest = dives.reduce((max, d) => Math.max(max, Number(d.depth || d.max_depth_m || 0)), 0);
+  const totalMin = dives.reduce((sum, d) => sum + Number(d.duration || d.duration_min || 0), 0);
+  const hrs = Math.floor(totalMin / 60);
+  const locations = new Set(dives.map(d => d.dive_site || d.site).filter(Boolean)).size;
+  return {
+    tiles: [
+      { label: 'Total Dives', value: String(total), icon: 'fish', color: c.tileBlue },
+      { label: 'Deepest Dive', value: `${deepest}m`, icon: 'trending-up', color: c.tileGreen },
+      { label: 'Total Time', value: `${hrs} hrs`, icon: 'time-outline', color: c.tileYellow },
+      { label: 'Locations', value: String(locations), icon: 'location-outline', color: c.tilePurple }
+    ]
+  };
+}
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [dives, setDives] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        if (!user?.id_number) { setIsLoading(false); return; }
+        const res = await getUserDives(user.id_number);
+        setDives(Array.isArray(res) ? res : []);
+      } catch (e) {
+        setError(e?.message || 'Failed to load');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [user?.id_number]);
+
+  const { tiles } = computeStats(dives);
+  const latest = dives.slice(0, 3).map(d => ({ id: d.id, spot: d.dive_site || d.site || 'Unknown site', date: d.dive_date, minutes: d.duration || d.duration_min || 0 }));
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+      {isLoading && (
+        <ActivityIndicator size="large" color={c.ocean} style={{ marginVertical: 8 }} />
+      )}
       <Text style={styles.sectionTitle}>Overview</Text>
       <View style={styles.tilesGrid}>
         {tiles.map((t) => (
