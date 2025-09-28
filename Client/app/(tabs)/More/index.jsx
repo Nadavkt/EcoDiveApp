@@ -21,7 +21,7 @@ export default function More() {
           <Text style={styles.tileSub}>Manage your personal information</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(tabs)/More/sites')}>
+        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(tabs)/More/sites/sites')}>
           <Ionicons name="map" size={42} color="#4cc5ff" />
           <Text style={styles.tileTitle}>Dive Sites</Text>
           <Text style={styles.tileSub}>Discover amazing global dive spots</Text>
