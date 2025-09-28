@@ -114,7 +114,7 @@ export default function Sites() {
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => handleSitePress(item)}>
             <View style={styles.cardImage}>
-              <Ionicons name="location-outline" size={48} color="#1F7A8C" />
+              <Ionicons name="location-outline" size={48} color="#4cc5ff" />
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle}>{item.name}</Text>

@@ -14,9 +14,11 @@ app.use(express.json({ limit: '10mb' }));
 const registerRoutes = require('./routes/register');
 const diveRoutes = require('./routes/dives');
 const diveSitesRoutes = require('./routes/dive-sites');
+const diveClubsRoutes = require('./routes/dive-clubs');
 app.use('/', registerRoutes);
 app.use('/', diveRoutes);
 app.use('/', diveSitesRoutes);
+app.use('/', diveClubsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

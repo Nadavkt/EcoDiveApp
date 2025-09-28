@@ -9,7 +9,7 @@ export default function More() {
     <View style={styles.container}>
 
       <View style={styles.tilesRow}>
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(tabs)/More/clubs')}>
+        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(tabs)/More/clubs/clubs')}>
           <Ionicons name="people" size={42} color="#4cc5ff" />
           <Text style={styles.tileTitle}>Dive Clubs</Text>
           <Text style={styles.tileSub}>Find and explore dive clubs near you</Text>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Platform, StatusBar, Linking, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../../../../services/api';
@@ -10,21 +10,20 @@ const colors = {
   bg: '#F6F7FB',
   white: '#FFFFFF',
   slate: '#515873',
-  ink: '#0B132B',
+  ocean: '#4cc5ff',
   border: '#E6EAF2',
-  ocean: '#1F7A8C',
-  foam: '#4cc5ff',
   success: '#10B981',
   warning: '#F59E0B',
-  error: '#EF4444'
+  error: '#EF4444',
+  ink: '#0B132B'
 };
 
-export default function DiveSiteDetail() {
+export default function ClubDetail() {
   const router = useRouter();
-  const { site: siteParam } = useLocalSearchParams();
+  const { club: clubParam } = useLocalSearchParams();
   const { user, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
-  const [site, setSite] = useState(null);
+  const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -34,50 +33,94 @@ export default function DiveSiteDetail() {
     comment: ''
   });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
-    if (siteParam) {
+    if (clubParam) {
       try {
-        const siteData = JSON.parse(siteParam);
-        setSite(siteData);
+        const clubData = JSON.parse(clubParam);
+        setClub(clubData);
         setLoading(false);
         
-        // Fetch detailed site information with reviews
-        if (siteData.site_id) {
-          fetchSiteDetails(siteData.site_id);
+        // Auto-fill user name if logged in
+        if (isAuthenticated && user) {
+          const userName = user.first_name && user.last_name 
+            ? `${user.first_name} ${user.last_name}`
+            : user.email || 'Anonymous';
+          setReviewForm(prev => ({ ...prev, user_name: userName }));
         }
+        
+        // Fetch reviews for this club
+        fetchReviews(clubData.club_id);
       } catch (err) {
-        setError('Invalid site data');
+        setError('Invalid club data');
         setLoading(false);
       }
-    }
-  }, [siteParam]);
-
-  // Auto-fill user name when user is logged in
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Anonymous';
-      setReviewForm(prev => ({
-        ...prev,
-        user_name: userName
-      }));
-    }
-  }, [isAuthenticated, user]);
-
-  const fetchSiteDetails = async (siteId) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/dive-sites/${siteId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch dive site details');
-      }
-      const data = await response.json();
-      setSite(data);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching dive site details:', err);
-    } finally {
+    } else {
+      setError('No club data provided');
       setLoading(false);
+    }
+  }, [clubParam, isAuthenticated, user]);
+
+  const fetchReviews = async (clubId) => {
+    try {
+      setLoadingReviews(true);
+      const response = await fetch(`${API_BASE_URL}/dive-clubs/${clubId}/reviews`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setReviews(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+      } else {
+        return date.toLocaleDateString();
+      }
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const handleCall = (phone) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  const handleEmail = (email) => {
+    if (email) {
+      Linking.openURL(`mailto:${email}`);
+    }
+  };
+
+  const handleWebsite = (website) => {
+    if (website && website !== 'none' && website !== '') {
+      let url = website;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      Linking.openURL(url);
     }
   };
 
@@ -87,73 +130,90 @@ export default function DiveSiteDetail() {
       return;
     }
 
+    if (!reviewForm.comment.trim()) {
+      Alert.alert('Error', 'Please write a review comment');
+      return;
+    }
+
     try {
       setSubmittingReview(true);
-      const response = await fetch(`${API_BASE_URL}/dive-sites/${site.site_id}/reviews`, {
+      
+      const response = await fetch(`${API_BASE_URL}/dive-clubs/${club.club_id}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(reviewForm),
+        body: JSON.stringify({
+          user_name: reviewForm.user_name.trim(),
+          rating: reviewForm.rating,
+          comment: reviewForm.comment.trim()
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit review');
+      const data = await response.json();
+
+      if (data.success) {
+        Alert.alert('Success', 'Your review has been submitted!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowReviewForm(false);
+              setReviewForm({
+                user_name: isAuthenticated && user ? 
+                  (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.email || 'Anonymous') 
+                  : '',
+                rating: 5,
+                comment: ''
+              });
+              // Refresh reviews list
+              fetchReviews(club.club_id);
+            }
+          }
+        ]);
+      } else {
+        Alert.alert('Error', data.error || 'Failed to submit review');
       }
-
-      const newReview = await response.json();
-      
-      // Add the new review to the site's reviews
-      setSite(prevSite => ({
-        ...prevSite,
-        reviews: [newReview, ...(prevSite.reviews || [])],
-        review_count: (prevSite.review_count || 0) + 1
-      }));
-
-      // Reset form
-      setReviewForm({
-        user_name: '',
-        rating: 5,
-        comment: ''
-      });
-      setShowReviewForm(false);
-
-      Alert.alert('Success', 'Your review has been submitted!');
-    } catch (err) {
-      Alert.alert('Error', err.message);
-      console.error('Error submitting review:', err);
+    } catch (error) {
+      Alert.alert('Error', 'Network error: ' + error.message);
     } finally {
       setSubmittingReview(false);
     }
   };
 
-  const renderStars = (rating, size = 16) => {
+  const renderStars = (rating) => {
+    if (!rating) return null;
+    
     const stars = [];
-    const safeRating = Math.max(0, Math.min(5, rating || 0));
-    for (let i = 1; i <= 5; i++) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    
+    for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <Ionicons
-          key={i}
-          name={i <= safeRating ? 'star' : 'star-outline'}
-          size={size}
-          color={i <= safeRating ? '#F59E0B' : '#D1D5DB'}
-        />
+        <Ionicons key={i} name="star" size={16} color={colors.warning} />
       );
     }
-    return stars;
-  };
-
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
+    
+    if (hasHalfStar) {
+      stars.push(
+        <Ionicons key="half" name="star-half" size={16} color={colors.warning} />
+      );
     }
+    
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Ionicons key={`empty-${i}`} name="star-outline" size={16} color={colors.border} />
+      );
+    }
+    
+    return (
+      <View style={styles.ratingContainer}>
+        <View style={styles.starsContainer}>
+          {stars}
+        </View>
+        <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+      </View>
+    );
   };
 
   if (loading) {
@@ -163,31 +223,31 @@ export default function DiveSiteDetail() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#333" />
           </Pressable>
-          <Text style={styles.headerTitle}>Dive Site Details</Text>
+          <Text style={styles.headerTitle}>Dive Club Details</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.ocean} />
-          <Text style={styles.loadingText}>Loading dive site...</Text>
+          <Text style={styles.loadingText}>Loading dive club...</Text>
         </View>
       </View>
     );
   }
 
-  if (error || !site) {
+  if (error || !club) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#333" />
           </Pressable>
-          <Text style={styles.headerTitle}>Dive Site Details</Text>
+          <Text style={styles.headerTitle}>Dive Club Details</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-          <Text style={styles.errorText}>Failed to load dive site</Text>
-          <Text style={styles.errorSubtext}>{error || 'Site not found'}</Text>
+          <Text style={styles.errorText}>Failed to load dive club</Text>
+          <Text style={styles.errorSubtext}>{error || 'Club not found'}</Text>
         </View>
       </View>
     );
@@ -199,99 +259,114 @@ export default function DiveSiteDetail() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </Pressable>
-        <Text style={styles.headerTitle}>Dive Site Details</Text>
+        <Text style={styles.headerTitle}>Dive Club Details</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Site Header */}
-        <View style={styles.siteHeader}>
-          <View style={styles.siteIcon}>
-            <Ionicons name="location" size={32} color={colors.foam} />
+        {/* Club Header */}
+        <View style={styles.clubHeader}>
+          <View style={styles.clubIcon}>
+            <Ionicons name="people" size={32} color={colors.ocean} />
           </View>
-          <View style={styles.siteInfo}>
-            <Text style={styles.siteName}>{site.name}</Text>
-            <Text style={styles.siteLocation}>{site.location}</Text>
-            <View style={styles.ratingContainer}>
-              <View style={styles.starsContainer}>
-                {renderStars(Math.round(site.average_rating || 0))}
+          <View style={styles.clubInfo}>
+            <Text style={styles.clubName}>{club.name}</Text>
+            <Text style={styles.clubLocation}>{club.location}</Text>
+            {club.rating && renderStars(club.rating)}
+          </View>
+        </View>
+
+        {/* Club Image */}
+        {club.image_url && (
+          <View style={styles.imageContainer}>
+            <View style={styles.clubImage} />
+          </View>
+        )}
+
+        {/* Description */}
+        {club.description && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About This Club</Text>
+            <Text style={styles.description}>{club.description}</Text>
+          </View>
+        )}
+
+        {/* Contact Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact Information</Text>
+          
+          {club.contact_phone && (
+            <Pressable style={styles.contactItem} onPress={() => handleCall(club.contact_phone)}>
+              <View style={styles.contactIcon}>
+                <Ionicons name="call" size={20} color={colors.ocean} />
               </View>
-              <Text style={styles.ratingText}>
-                {site.average_rating ? site.average_rating.toFixed(1) : 'No rating'} 
-                ({site.review_count || 0} reviews)
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Site Description */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Description</Text>
-          <Text style={styles.descriptionText}>{site.description || 'No description available.'}</Text>
-        </View>
-
-        {/* Location Info */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Location Details</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="map-outline" size={20} color={colors.slate} />
-            <Text style={styles.locationText}>{site.location}</Text>
-          </View>
-        </View>
-
-        {/* Dive Information */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Dive Information</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Ionicons name="water-outline" size={20} color={colors.foam} />
-              <Text style={styles.infoLabel}>Water Type</Text>
-              <Text style={styles.infoValue}>
-                {site.location.includes('Red Sea') ? 'Red Sea' : 
-                 site.location.includes('Mediterranean') ? 'Mediterranean Sea' : 'Unknown'}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="thermometer-outline" size={20} color={colors.foam} />
-              <Text style={styles.infoLabel}>Temperature</Text>
-              <Text style={styles.infoValue}>
-                {site.location.includes('Red Sea') ? '22-28°C' : 
-                 site.location.includes('Mediterranean') ? '18-26°C' : 'Varies'}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="eye-outline" size={20} color={colors.foam} />
-              <Text style={styles.infoLabel}>Visibility</Text>
-              <Text style={styles.infoValue}>
-                {site.location.includes('Red Sea') ? '15-30m' : 
-                 site.location.includes('Mediterranean') ? '5-15m' : 'Varies'}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="person-outline" size={20} color={colors.foam} />
-              <Text style={styles.infoLabel}>Difficulty</Text>
-              <Text style={styles.infoValue}>
-                {site.description?.toLowerCase().includes('advanced') ? 'Advanced' :
-                 site.description?.toLowerCase().includes('beginner') ? 'Beginner' : 'Intermediate'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Reviews Section */}
-        <View style={styles.card}>
-          <View style={styles.reviewsHeader}>
-            <Text style={styles.cardTitle}>Reviews ({site.review_count || 0})</Text>
-            <Pressable 
-              style={styles.addReviewButton}
-              onPress={() => setShowReviewForm(!showReviewForm)}
-            >
-              <Ionicons name="add" size={20} color={colors.white} />
-              <Text style={styles.addReviewButtonText}>Add Review</Text>
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactLabel}>Phone</Text>
+                <Text style={styles.contactValue}>{club.contact_phone}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.slate} />
             </Pressable>
-          </View>
+          )}
 
-          {/* Review Form */}
+          {club.contact_email && (
+            <Pressable style={styles.contactItem} onPress={() => handleEmail(club.contact_email)}>
+              <View style={styles.contactIcon}>
+                <Ionicons name="mail" size={20} color={colors.ocean} />
+              </View>
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactLabel}>Email</Text>
+                <Text style={styles.contactValue}>{club.contact_email}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.slate} />
+            </Pressable>
+          )}
+
+          {club.website && club.website !== 'none' && club.website !== '' && (
+            <Pressable style={styles.contactItem} onPress={() => handleWebsite(club.website)}>
+              <View style={styles.contactIcon}>
+                <Ionicons name="globe" size={20} color={colors.ocean} />
+              </View>
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactLabel}>Website</Text>
+                <Text style={styles.contactValue}>{club.website}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.slate} />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Additional Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Club Details</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Location</Text>
+            <Text style={styles.detailValue}>{club.location}</Text>
+          </View>
+          {club.created_at && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Established</Text>
+              <Text style={styles.detailValue}>
+                {new Date(club.created_at).toLocaleDateString()}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Write Review Section */}
+        <View style={styles.section}>
+          <View style={styles.reviewsHeader}>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            {!showReviewForm && (
+              <Pressable 
+                style={styles.addReviewButton} 
+                onPress={() => setShowReviewForm(true)}
+              >
+                <Ionicons name="add" size={16} color={colors.white} />
+                <Text style={styles.addReviewButtonText}>Add Review</Text>
+              </Pressable>
+            )}
+          </View>
+          
           {showReviewForm && (
             <View style={styles.reviewForm}>
               <Text style={styles.formTitle}>Write a Review</Text>
@@ -351,7 +426,16 @@ export default function DiveSiteDetail() {
               <View style={styles.formButtons}>
                 <Pressable 
                   style={styles.cancelButton}
-                  onPress={() => setShowReviewForm(false)}
+                  onPress={() => {
+                    setShowReviewForm(false);
+                    setReviewForm({
+                      user_name: isAuthenticated && user ? 
+                        (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.email || 'Anonymous') 
+                        : '',
+                      rating: 5,
+                      comment: ''
+                    });
+                  }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </Pressable>
@@ -371,10 +455,10 @@ export default function DiveSiteDetail() {
           )}
 
           {/* Reviews List */}
-          {site.reviews && Array.isArray(site.reviews) && site.reviews.length > 0 ? (
+          {!showReviewForm && reviews && Array.isArray(reviews) && reviews.length > 0 ? (
             <>
-              <Text style={styles.reviewsSubtitle}>Latest Reviews ({site.reviews.length})</Text>
-              {site.reviews.slice(0, 5).map((review) => (
+              <Text style={styles.reviewsSubtitle}>Latest Reviews ({reviews.length})</Text>
+              {reviews.slice(0, 5).map((review) => (
                 <View key={review.review_id || Math.random()} style={styles.reviewItem}>
                   <View style={styles.reviewHeader}>
                     <Text style={styles.reviewerName}>{review.user_name || 'Anonymous'}</Text>
@@ -388,17 +472,17 @@ export default function DiveSiteDetail() {
                   <Text style={styles.reviewDate}>{formatDate(review.created_at)}</Text>
                 </View>
               ))}
-              {site.reviews.length > 5 && (
+              {reviews.length > 5 && (
                 <Text style={styles.moreReviewsText}>
-                  Showing latest 5 of {site.reviews.length} reviews
+                  Showing latest 5 of {reviews.length} reviews
                 </Text>
               )}
             </>
-          ) : (
+          ) : !showReviewForm && (
             <View style={styles.noReviewsContainer}>
               <Ionicons name="chatbubbles-outline" size={32} color={colors.slate} />
               <Text style={styles.noReviewsText}>No reviews yet</Text>
-              <Text style={styles.noReviewsSubtext}>Be the first to review this dive site!</Text>
+              <Text style={styles.noReviewsSubtext}>Be the first to review this dive club!</Text>
             </View>
           )}
         </View>
@@ -442,7 +526,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 12,
     fontSize: 16,
     color: colors.slate,
   },
@@ -452,47 +536,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
+    marginTop: 12,
     fontSize: 18,
     fontWeight: '600',
     color: colors.error,
-    marginTop: 16,
   },
   errorSubtext: {
+    marginTop: 4,
     fontSize: 14,
     color: colors.slate,
-    marginTop: 8,
     textAlign: 'center',
   },
-  siteHeader: {
+  clubHeader: {
     backgroundColor: colors.white,
-    margin: 16,
-    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  siteIcon: {
+  clubIcon: {
     width: 60,
     height: 60,
-    backgroundColor: colors.bg,
     borderRadius: 30,
-    justifyContent: 'center',
+    backgroundColor: colors.bg,
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 16,
   },
-  siteInfo: {
+  clubInfo: {
     flex: 1,
   },
-  siteName: {
+  clubName: {
     fontSize: 20,
     fontWeight: '800',
     color: colors.ink,
     marginBottom: 4,
   },
-  siteLocation: {
-    fontSize: 16,
+  clubLocation: {
+    fontSize: 14,
     color: colors.slate,
     marginBottom: 8,
   },
@@ -506,72 +592,94 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: colors.slate,
+    fontWeight: '600',
+    color: colors.warning,
   },
-  card: {
+  imageContainer: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  clubImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.bg,
+  },
+  section: {
     backgroundColor: colors.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 20,
+    marginBottom: 12,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cardTitle: {
+  sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.ink,
     marginBottom: 12,
   },
-  descriptionText: {
-    fontSize: 16,
-    color: colors.slate,
-    lineHeight: 24,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  locationText: {
+  description: {
     fontSize: 14,
+    lineHeight: 20,
     color: colors.slate,
-    marginLeft: 8,
   },
-  infoGrid: {
+  contactItem: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  infoItem: {
-    width: '48%',
-    backgroundColor: colors.bg,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
     alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bg,
   },
-  infoLabel: {
+  contactIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactLabel: {
     fontSize: 12,
     color: colors.slate,
-    marginTop: 4,
-    textAlign: 'center',
+    marginBottom: 2,
   },
-  infoValue: {
+  contactValue: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.ink,
-    marginTop: 2,
-    textAlign: 'center',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bg,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: colors.slate,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.ink,
   },
   reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   addReviewButton: {
-    backgroundColor: colors.foam,
+    backgroundColor: colors.ocean,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -588,13 +696,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   formTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.ink,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   input: {
     backgroundColor: colors.white,
@@ -670,7 +778,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: colors.foam,
+    backgroundColor: colors.ocean,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -682,36 +790,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     fontWeight: '600',
-  },
-  reviewItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 16,
-    marginBottom: 16,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-  },
-  reviewComment: {
-    fontSize: 14,
-    color: colors.slate,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: colors.slate,
   },
   noReviewsContainer: {
     alignItems: 'center',
@@ -734,6 +812,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.ink,
     marginBottom: 12,
+  },
+  reviewItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  reviewerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: colors.slate,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: colors.slate,
   },
   moreReviewsText: {
     fontSize: 12,
