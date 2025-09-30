@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../../../contexts/AuthContext';
-import { createDive } from '../../../services/api';
+import { createDive, API_BASE_URL } from '../../../services/api';
 
 export default function FreeDiveForm() {
   const router = useRouter();
@@ -27,25 +27,68 @@ export default function FreeDiveForm() {
   const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState(new Date());
 
-  // Predefined list of dive sites
-  const diveSites = [
-    'Great Barrier Reef, Australia',
-    'Blue Hole, Egypt',
-    'Silfra, Iceland',
-    'Barracuda Point, Malaysia',
-    'SS Thistlegorm, Egypt',
-    'Manta Point, Indonesia',
-    'Shark Point, Thailand',
-    'Blue Corner, Palau',
-    'SS Yongala, Australia',
-    'Manta Ray Night Dive, Hawaii',
-    'Cenotes, Mexico',
-    'Galapagos Islands, Ecuador',
-    'Raja Ampat, Indonesia',
-    'Komodo National Park, Indonesia',
-    'Tubbataha Reefs, Philippines',
-    'Other (Custom)'
-  ];
+  // Live dive sites from API
+  const [allSites, setAllSites] = useState([]);
+  const [sitesLoading, setSitesLoading] = useState(false);
+  const [sitesError, setSitesError] = useState('');
+  const [userCoords, setUserCoords] = useState(null);
+  const [requestingLocation, setRequestingLocation] = useState(false);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        setSitesLoading(true);
+        const res = await fetch(`${API_BASE_URL}/dive-sites`);
+        if (!res.ok) throw new Error('Failed to fetch dive sites');
+        const data = await res.json();
+        setAllSites(Array.isArray(data) ? data : []);
+        setSitesError('');
+      } catch (e) {
+        setSitesError(e.message);
+      } finally {
+        setSitesLoading(false);
+      }
+    };
+    fetchSites();
+  }, []);
+
+  const requestLocation = async () => {
+    try {
+      setRequestingLocation(true);
+      const Location = (await import('expo-location'));
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Location denied', 'Showing all sites without filtering.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+    } catch (e) {
+      Alert.alert('Location error', e.message);
+    } finally {
+      setRequestingLocation(false);
+    }
+  };
+
+  const distanceKm = (a, b) => {
+    if (!a || !b) return Number.POSITIVE_INFINITY;
+    const R = 6371;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLon = (b.lon - a.lon) * Math.PI / 180;
+    const lat1 = a.lat * Math.PI / 180;
+    const lat2 = b.lat * Math.PI / 180;
+    const x = Math.sin(dLat/2)**2 + Math.sin(dLon/2)**2 * Math.cos(lat1) * Math.cos(lat2);
+    const d = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    return R * d;
+  };
+
+  const filteredSites = useMemo(() => {
+    if (!userCoords) return allSites;
+    const withCoords = allSites.filter(s => s.latitude != null && s.longitude != null);
+    return withCoords
+      .map(s => ({ ...s, _dist: distanceKm(userCoords, { lat: Number(s.latitude), lon: Number(s.longitude) }) }))
+      .sort((a, b) => a._dist - b._dist);
+  }, [allSites, userCoords]);
 
   const handleSave = async () => {
     try {
@@ -397,16 +440,32 @@ export default function FreeDiveForm() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
+            <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+              <TouchableOpacity onPress={requestLocation} disabled={requestingLocation} style={{ alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                <Text style={{ color: '#0B132B', fontWeight: '600' }}>{requestingLocation ? 'Locating…' : 'Use My Location'}</Text>
+              </TouchableOpacity>
+              {!!sitesError && <Text style={{ color: '#B91C1C', marginTop: 8 }}>{sitesError}</Text>}
+            </View>
             <ScrollView style={styles.siteList}>
-              {diveSites.map((site, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.siteOption}
-                  onPress={() => handleSiteSelect(site)}
-                >
-                  <Text style={styles.siteOptionText}>{site}</Text>
-                </TouchableOpacity>
-              ))}
+              {sitesLoading ? (
+                <Text style={{ padding: 20, color: '#6B7280' }}>Loading sites…</Text>
+              ) : (
+                <>
+                  {filteredSites.map((s) => (
+                    <TouchableOpacity
+                      key={s.site_id}
+                      style={styles.siteOption}
+                      onPress={() => handleSiteSelect(s.name)}
+                    >
+                      <Text style={styles.siteOptionText}>{s.name}</Text>
+                      <Text style={{ color: '#6B7280', fontSize: 12 }}>{s.location}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={styles.siteOption} onPress={() => handleSiteSelect('Other (Custom)')}>
+                    <Text style={styles.siteOptionText}>Other (Custom)</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>

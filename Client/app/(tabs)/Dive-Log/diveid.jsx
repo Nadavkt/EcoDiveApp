@@ -89,7 +89,12 @@ function safeJsonArray(text) {
         {/* Main Info Card */}
         <View style={styles.mainCard}>
           <Text style={styles.diveDate}>{formatDate(dive.dive_date || dive.date)}</Text>
-          <Text style={styles.location}>{dive.dive_site || dive.site || dive.location}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <Ionicons name="location-outline" size={18} color={colors.slate} />
+            <Text style={[styles.location, { marginBottom: 0, marginLeft: 6 }]}>
+              {dive.dive_site || dive.site || dive.location}
+            </Text>
+          </View>
           
           {/* Dive Stats */}
           <View style={styles.statsContainer}>
@@ -102,6 +107,11 @@ function safeJsonArray(text) {
               <Ionicons name="time-outline" size={20} color={colors.ocean} />
               <Text style={styles.statValue}>{(dive.duration ?? dive.duration_min ?? dive.durationMinutes) || 0}min</Text>
               <Text style={styles.statLabel}>Duration</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="list-outline" size={20} color={colors.ocean} />
+              <Text style={styles.statValue}>{(dive.diveNumber ?? dive.dive_number) || '—'}</Text>
+              <Text style={styles.statLabel}>Dive #</Text>
             </View>
             {/* Temperature not in current schema */}
           </View>
@@ -129,6 +139,15 @@ function safeJsonArray(text) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dive Notes</Text>
           <Text style={styles.notesText}>{dive.description || dive.notes || '—'}</Text>
+        </View>
+
+        {/* Buddy */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Additional Info</Text>
+          <View>
+            <Text style={{ color: colors.slate, marginBottom: 6 }}>Body Diver</Text>
+            <Text style={{ color: colors.ink, fontWeight: '700' }}>{dive.bodyDiver || dive.body_diver || '—'}</Text>
+          </View>
         </View>
 
         {/* Confirmation Card */}

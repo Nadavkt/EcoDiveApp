@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/api';
 
 const CustomTabBarIcon = ({ route, color, size, focused }) => {
   let icon = 'ellipse';
@@ -37,14 +38,16 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 11 },
         headerTitleAlign: 'center',
         headerTitle: route.name === 'home' ? 'EcoDive' : undefined,
-        headerRight: () => (
-          <Image
-            source={{ 
-              uri: user?.profile_image || 'https://i.pravatar.cc/100?img=12' 
-            }}
-            style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12, borderWidth: 2, borderColor: '#A8DADC' }}
-          />
-        ),
+        headerRight: () => {
+          const raw = user?.profile_image || user?.profile_image_url;
+          const uri = raw ? (raw.startsWith('http://') || raw.startsWith('https://') ? raw : `${API_BASE_URL}${raw}`) : 'https://i.pravatar.cc/100?img=12';
+          return (
+            <Image
+              source={{ uri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginRight: 12, borderWidth: 2, borderColor: '#A8DADC' }}
+            />
+          );
+        },
         headerStyle: { backgroundColor: '#4cc5ff' },
         headerTitleStyle: { color: '#F5F5F5', fontWeight: '700' },
         tabBarStyle: {

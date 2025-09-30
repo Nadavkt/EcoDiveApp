@@ -1,12 +1,39 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { API_BASE_URL } from '../../../services/api';
 
 export default function Profile() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [serverProfile, setServerProfile] = React.useState(null);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      const load = async () => {
+        if (!user?.id) return;
+        try {
+          setRefreshing(true);
+          const res = await fetch(`${API_BASE_URL}/users/${user.id}`);
+          const data = await res.json();
+          if (res.ok && data.success && isActive) {
+            setServerProfile(data.data);
+          }
+        } catch (e) {
+          // silent fail
+        } finally {
+          if (isActive) setRefreshing(false);
+        }
+      };
+      load();
+      return () => { isActive = false; };
+    }, [user?.id])
+  );
   
   const handleLogout = () => {
     logout();
@@ -25,15 +52,15 @@ export default function Profile() {
       <View style={styles.header}>
         <Image 
           source={{ 
-            uri: user?.profile_image || 'https://i.pravatar.cc/200?img=12' 
+            uri: serverProfile?.profile_image || user?.profile_image || 'https://i.pravatar.cc/200?img=12' 
           }} 
           style={styles.avatar} 
         />
         <Text style={styles.name}>
-          {user ? `${user.first_name} ${user.last_name}` : 'Guest User'}
+          {serverProfile ? `${serverProfile.first_name || ''} ${serverProfile.last_name || ''}`.trim() : (user ? `${user.first_name} ${user.last_name}` : 'Guest User')}
         </Text>
         <Text style={styles.email}>
-          {user?.email || 'No email available'}
+          {serverProfile?.email || user?.email || 'No email available'}
         </Text>
       </View>
 
@@ -51,7 +78,7 @@ export default function Profile() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Account</Text>
-        <TouchableOpacity style={styles.actionRow}>
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('/(tabs)/More/Edit-Profile')}>
           <Text style={styles.actionText}>Edit Profile</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionRow}>

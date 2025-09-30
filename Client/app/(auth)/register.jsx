@@ -21,6 +21,7 @@ export default function Register() {
     password: '',
     confirmPassword: ''
   });
+  
   const [profileImage, setProfileImage] = useState(null);
   const [licenseFront, setLicenseFront] = useState(null);
   const [licenseBack, setLicenseBack] = useState(null);

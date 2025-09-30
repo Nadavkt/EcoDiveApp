@@ -8,17 +8,22 @@ const app = express();
 // Middleware
 app.use(cors());
 // app.use(morgan('dev'));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '20mb' }));
+// serve uploads
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 const registerRoutes = require('./routes/register');
 const diveRoutes = require('./routes/dives');
 const diveSitesRoutes = require('./routes/dive-sites');
 const diveClubsRoutes = require('./routes/dive-clubs');
+const usersRoutes = require('./routes/users');
 app.use('/', registerRoutes);
 app.use('/', diveRoutes);
 app.use('/', diveSitesRoutes);
 app.use('/', diveClubsRoutes);
+app.use('/', usersRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
