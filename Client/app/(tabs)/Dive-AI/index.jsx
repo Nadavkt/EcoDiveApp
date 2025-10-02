@@ -1,12 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, ActivityIndicator } from 'react-native';
+import { API_BASE_URL } from '../../../services/api'; // make sure this points to your backend
 
 export default function DiveAI() {
-  const [messages, setMessages] = useState([
-    { id: '1', role: 'assistant', text: 'Hi! I am DiveAI. Ask me anything about your dives.' },
-    { id: '2', role: 'user', text: 'Help me plan a safe 20m reef dive.' }
-  ]);
+  const [messages, setMessages] = useState([]); // ✅ add this
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const flatListRef = useRef(null);
 
   const renderItem = ({ item }) => {
@@ -22,27 +21,49 @@ export default function DiveAI() {
 
   const keyExtractor = useMemo(() => (item) => item.id, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    const newMsg = { id: Date.now().toString(), role: 'user', text: trimmed };
-    setMessages((prev) => [...prev, newMsg]);
+
+    const userMsg = { id: Date.now().toString(), role: 'user', text: trimmed };
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
-
-    // Placeholder: mock assistant response for chat feel
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          text: 'Got it! I will consider currents, depth, and safety stops. '
-        }
-      ]);
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 500);
-
     requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
+
+    try {
+      setLoading(true);
+
+      // ✅ Do NOT send HF token from the app
+      const res = await fetch(`${API_BASE_URL}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are DiveAI, a helpful dive planning and safety assistant.' },
+            ...messages.map(m => ({ role: m.role, content: m.text })),
+            { role: 'user', content: trimmed }
+          ]
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        const errMsg = data?.error || `Server error (${res.status})`;
+        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', text: `Error: ${errMsg}` }]);
+        return;
+      }
+
+      const text = data?.reply && String(data.reply).trim().length > 0
+        ? data.reply
+        : 'Sorry, I could not generate a response.';
+      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', text }]);
+
+    } catch (e) {
+      setMessages((prev) => [...prev, { id: (Date.now() + 2).toString(), role: 'assistant', text: 'Network error. Please try again.' }]);
+    } finally {
+      setLoading(false);
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
   };
 
   return (
@@ -61,7 +82,6 @@ export default function DiveAI() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
-
         <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
@@ -71,14 +91,16 @@ export default function DiveAI() {
             placeholderTextColor="#9aa3b2"
             multiline
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend} activeOpacity={0.8}>
-            <Text style={styles.sendText}>Send</Text>
+          <TouchableOpacity style={styles.sendButton} onPress={handleSend} activeOpacity={0.8} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendText}>Send</Text>}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+// ...styles unchanged ...
 
 const styles = StyleSheet.create({
   safe: {

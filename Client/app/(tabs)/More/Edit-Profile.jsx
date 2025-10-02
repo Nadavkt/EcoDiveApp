@@ -350,7 +350,7 @@ export default function EditProfile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, position: 'relative' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E6EAF2', margin: 16, marginBottom: 12 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 16, fontWeight: '600', color: colors.ink, position: 'absolute', left: 0, right: 0, textAlign: 'center' },
   saveButton: { backgroundColor: colors.ocean, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },

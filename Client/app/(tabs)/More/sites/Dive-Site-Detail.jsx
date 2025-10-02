@@ -413,14 +413,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    backgroundColor: '#FFFFFF', 
+    paddingHorizontal: 8, 
+    paddingVertical: 10, 
+    borderRadius: 10, 
+    borderWidth: 1, borderColor: '#E6EAF2', 
+    margin: 16, marginBottom: 12
   },
   backButton: {
     padding: 4,
