@@ -8,9 +8,22 @@ const cors = require('cors');
 // const morgan = require('morgan');
 
 const app = express();
-app.use(cors());
+
+// CORS: allow comma-separated origins via env ALLOWED_ORIGINS; default allow all (dev)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  }
+}));
 // app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+
+// Static uploads (e.g., profile images, documents)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // -------- routes (require AFTER env is loaded) --------
 const registerRoutes   = require('./routes/register');
