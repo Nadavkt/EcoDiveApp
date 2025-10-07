@@ -16,6 +16,7 @@ const router = express.Router();
 
 const AI_PROVIDER = (process.env.AI_PROVIDER || 'huggingface').trim();
 const HF_MODEL_ID = (process.env.HF_MODEL_ID || 'openai/gpt-oss-120b').trim();
+const HF_API_KEY  = (process.env.HF_API_KEY || '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').trim();
 const HF_API_URL  = (process.env.HF_API_URL || `https://api-inference.huggingface.co/models/${HF_MODEL_ID}`).trim();
 
 // Short, diving-focused system prompt
