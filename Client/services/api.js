@@ -1,7 +1,7 @@
 // Minimal API helpers for JSON and multipart requests
 // Configure your API base URL via EXPO_PUBLIC_API_URL; fallback to local dev server
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://65cc1c7c63ea.ngrok-free.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://ecodiveapp-theapp.onrender.com';
 
 // Debug logging
 console.log('=== API CONFIGURATION ===');
