@@ -5,27 +5,29 @@
     "scheme": "EcoDive",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ecodive_app.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ecodive_app.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nadav.ecodive",   
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ecodive_app.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "userInterfaceStyle": "automatic"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/ecodive_app.png"
     },
     "plugins": [
       "expo-router"
