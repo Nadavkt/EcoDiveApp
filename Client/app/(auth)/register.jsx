@@ -1,7 +1,6 @@
 import 'react-native-get-random-values';
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import bcrypt from 'bcryptjs';
 import { saveUser, sendRegistrationEmail } from '../../services/api';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -137,16 +136,14 @@ export default function Register() {
         return;
       }
 
-      // 1-2) Hash password and save user (excluding insurance confirmation file) to DB
-      const salt = bcrypt.genSaltSync(10);
-      const passwordHash = bcrypt.hashSync(formData.password, salt);
-
+      // 1-2) Save user (excluding insurance confirmation file) to DB
+      // Password will be hashed on the server side for security
       const userPayload = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         idNumber: formData.idNumber,
-        passwordHash,
+        password: formData.password,
         // send references/URIs of images as metadata if backend supports it
         profileImage: profileImage || null,
         licenseFront: licenseFront || null,

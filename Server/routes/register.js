@@ -25,7 +25,7 @@ const userSchema = z.object({
   lastName: z.string().min(1),
   email: z.string().email(),
   idNumber: z.string().min(3),
-  passwordHash: z.string().min(10).max(200),
+  password: z.string().min(6).max(100),
   profileImage: z.string().nullable().optional(),
   licenseFront: z.string().nullable().optional(),
   licenseBack: z.string().nullable().optional()
@@ -42,9 +42,13 @@ router.post('/users', async (req, res) => {
   try {
     console.log('Received user data:', req.body);
     const parsed = userSchema.parse(req.body);
-    const { firstName, lastName, email, idNumber, passwordHash, profileImage, licenseFront, licenseBack } = parsed;
+    const { firstName, lastName, email, idNumber, password, profileImage, licenseFront, licenseBack } = parsed;
     
-    console.log('Parsed user data:', { firstName, lastName, email, idNumber, passwordHashLength: passwordHash?.length });
+    console.log('Parsed user data:', { firstName, lastName, email, idNumber });
+    
+    // Hash password on the server side for security
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
     
     const result = await pool.query(
       `INSERT INTO users (first_name, last_name, email, id_number, password, profile_image, license_front, license_back)

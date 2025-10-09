@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/ecodive_app.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/ecodive_app.png",
       "resizeMode": "contain",
@@ -15,8 +15,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nadav.ecodive",   
-      "buildNumber": "1"
+      "bundleIdentifier": "com.nadav.ecodive",
+      "buildNumber": "1",
+      "deploymentTarget": "13.4",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "EcoDive needs your location to show nearby dive sites and log dive locations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "EcoDive needs your location to show nearby dive sites and log dive locations.",
+        "NSPhotoLibraryUsageDescription": "EcoDive needs access to your photos to upload profile pictures and dive photos.",
+        "NSCameraUsageDescription": "EcoDive needs access to your camera to take photos for your profile and dives."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,11 +38,24 @@
       "favicon": "./assets/ecodive_app.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "EcoDive needs access to your photos to upload profile pictures and dive photos.",
+          "cameraPermission": "EcoDive needs access to your camera to take photos for your profile and dives."
+        }
+      ],
+      "expo-document-picker"
     ],
     "extra": {
       "EXPO_PUBLIC_API_URL": "https://5e6766f98059.ngrok-free.app",
-      "EXPO_PUBLIC_REGISTRATION_EMAIL": "ecodive09@gmail.com"
+      "EXPO_PUBLIC_REGISTRATION_EMAIL": "ecodive09@gmail.com",
+      "router": {},
+      "eas": {
+        "projectId": "d84050d0-481f-4973-80b5-1c98735e9435"
+      }
     }
   }
 }
