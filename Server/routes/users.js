@@ -1,4 +1,5 @@
 const express = require('express');
+const nodemailer = require('nodemailer');
 const { getPool } = require('../db');
 
 const router = express.Router();
@@ -105,7 +106,7 @@ router.delete('/users/:id', async (req, res) => {
     
     // First, verify that the provided ID number matches the user's account
     const userCheck = await pool.query(
-      'SELECT id, id_number, first_name, last_name FROM users WHERE id = $1',
+      'SELECT id, id_number, first_name, last_name, email FROM users WHERE id = $1',
       [id]
     );
     
@@ -176,6 +177,86 @@ router.delete('/users/:id', async (req, res) => {
       await pool.query('COMMIT');
       
       console.log(`User ${id} (ID number: ${idNumber}) deleted successfully. ${anonymizedReviews} reviews anonymized.`);
+      
+      // Send confirmation email to the user
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { 
+            user: process.env.SMTP_USER, 
+            pass: process.env.SMTP_PASS 
+          }
+        });
+
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #4cc5ff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+              .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+              .info-box { background-color: #fff; border-left: 4px solid #4cc5ff; padding: 15px; margin: 20px 0; }
+              .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>EcoDive Account Deletion</h1>
+              </div>
+              <div class="content">
+                <h2>Your Account Has Been Deleted</h2>
+                <p>Hello ${user.first_name} ${user.last_name},</p>
+                <p>We're writing to confirm that your EcoDive account has been permanently deleted as requested.</p>
+                
+                <div class="info-box">
+                  <strong>What has been deleted:</strong>
+                  <ul>
+                    <li>Your profile and personal information</li>
+                    <li>Your dive history and logs</li>
+                    <li>Your account credentials</li>
+                  </ul>
+                </div>
+                
+                ${anonymizedReviews > 0 ? `
+                <div class="info-box">
+                  <strong>Reviews Preserved:</strong>
+                  <p>${anonymizedReviews} review(s) you wrote have been anonymized and preserved to help the diving community. They now appear as "Anonymous User".</p>
+                </div>
+                ` : ''}
+                
+                <p>If you did not request this deletion, please contact us immediately at <strong>${process.env.SMTP_USER}</strong>.</p>
+                
+                <p>We're sorry to see you go! If you'd like to return to EcoDive in the future, you're always welcome to create a new account.</p>
+                
+                <p>Thank you for being part of our diving community!</p>
+                
+                <p><strong>The EcoDive Team</strong></p>
+              </div>
+              <div class="footer">
+                <p>This is an automated message. Please do not reply to this email.</p>
+                <p>&copy; ${new Date().getFullYear()} EcoDive. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        await transporter.sendMail({
+          from: `"EcoDive" <${process.env.SMTP_USER}>`,
+          to: user.email,
+          subject: 'EcoDive Account Deletion Confirmation',
+          html: emailHtml
+        });
+
+        console.log(`Account deletion confirmation email sent to ${user.email}`);
+      } catch (emailError) {
+        // Don't fail the deletion if email fails, just log it
+        console.error('Failed to send deletion confirmation email:', emailError.message);
+      }
+      
       res.json({ 
         success: true, 
         message: 'Account deleted successfully.' + (anonymizedReviews > 0 ? ' Your reviews have been anonymized and preserved.' : '')
