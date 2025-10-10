@@ -131,8 +131,13 @@ router.delete('/users/:id', async (req, res) => {
     await pool.query('BEGIN');
     
     try {
-      // Delete user's dives first (foreign key constraint)
-      await pool.query('DELETE FROM dives WHERE user_id = $1', [id]);
+      // Delete user's dive history
+      try {
+        await pool.query('DELETE FROM dive_history WHERE user_id = $1', [id]);
+      } catch (diveErr) {
+        // Table might not exist, that's okay - just log and continue
+        console.log('Dive history table not found or error deleting dives:', diveErr.message);
+      }
       
       // Anonymize user's reviews instead of deleting them (keep valuable content)
       // Note: The reviews table doesn't have user_id, it uses user_name directly
@@ -141,14 +146,19 @@ router.delete('/users/:id', async (req, res) => {
       
       let anonymizedReviews = 0;
       if (userName) {
-        const reviewsResult = await pool.query(
-          `UPDATE reviews 
-           SET user_name = 'Anonymous User' 
-           WHERE user_name = $1 
-           RETURNING review_id`,
-          [userName]
-        );
-        anonymizedReviews = reviewsResult.rows.length;
+        try {
+          const reviewsResult = await pool.query(
+            `UPDATE reviews 
+             SET user_name = 'Anonymous User' 
+             WHERE user_name = $1 
+             RETURNING review_id`,
+            [userName]
+          );
+          anonymizedReviews = reviewsResult.rows.length;
+        } catch (reviewErr) {
+          // Reviews table might not exist or error updating - log and continue
+          console.log('Error anonymizing reviews:', reviewErr.message);
+        }
       }
       
       // Delete the user
@@ -168,7 +178,7 @@ router.delete('/users/:id', async (req, res) => {
       console.log(`User ${id} (ID number: ${idNumber}) deleted successfully. ${anonymizedReviews} reviews anonymized.`);
       res.json({ 
         success: true, 
-        message: 'Account deleted successfully. Your reviews have been anonymized and preserved.' 
+        message: 'Account deleted successfully.' + (anonymizedReviews > 0 ? ' Your reviews have been anonymized and preserved.' : '')
       });
     } catch (err) {
       // Rollback on error
