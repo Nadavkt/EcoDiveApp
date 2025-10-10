@@ -10,9 +10,10 @@ const router = express.Router();
 //   GROQ_API_KEY (get from https://console.groq.com)
 // For OpenAI:
 //   OPENAI_API_KEY
+
+// const OLLAMA_URL = (process.env.OLLAMA_URL || 'https://ecodive.duckdns.org/api/chat').trim();
+// const OLLAMA_MODEL = (process.env.OLLAMA_MODEL || 'mistral:7b-instruct-q4_K_M').trim();
 const AI_PROVIDER = (process.env.AI_PROVIDER || 'groq').trim().toLowerCase();
-const OLLAMA_URL = (process.env.OLLAMA_URL || 'https://ecodive.duckdns.org/api/chat').trim();
-const OLLAMA_MODEL = (process.env.OLLAMA_MODEL || 'mistral:7b-instruct-q4_K_M').trim();
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
@@ -56,43 +57,6 @@ async function callGroq(messages, signal) {
   const data = await r.json();
   const text = data.choices?.[0]?.message?.content || '';
   if (!text.trim()) throw new Error('Empty response from Groq');
-  return text.trim();
-}
-
-/**
- * Call OpenAI
- */
-async function callOpenAI(messages, signal) {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
-  }
-
-  const payload = {
-    model: 'gpt-3.5-turbo',
-    messages: [{ role: 'system', content: DIVING_SYSTEM_PROMPT }, ...messages],
-    temperature: 0.2,
-    max_tokens: 500
-  };
-
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
-    },
-    body: JSON.stringify(payload),
-    signal
-  });
-
-  if (!r.ok) {
-    const error = await r.text();
-    console.error('OpenAI error', r.status, error);
-    throw new Error(`OpenAI error ${r.status}: ${error || 'Unknown'}`);
-  }
-
-  const data = await r.json();
-  const text = data.choices?.[0]?.message?.content || '';
-  if (!text.trim()) throw new Error('Empty response from OpenAI');
   return text.trim();
 }
 
@@ -150,8 +114,6 @@ async function callAI(messages, signal) {
   switch (AI_PROVIDER) {
     case 'groq':
       return await callGroq(messages, signal);
-    case 'openai':
-      return await callOpenAI(messages, signal);
     case 'ollama':
       return await callOllama(messages, signal);
     default:
