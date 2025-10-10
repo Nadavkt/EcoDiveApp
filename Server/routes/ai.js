@@ -6,8 +6,8 @@ const router = express.Router();
 // OLLAMA_URL   e.g. http://localhost:11434/api/chat   (or https://ollama.yourdomain.com/api/chat)
 // OLLAMA_MODEL e.g. mistral / llama3 / llama3.1:8b-instruct / qwen2.5, etc.
 // OLLAMA_BASIC_AUTH (optional) base64 "user:pass" if you protected the proxy with Basic Auth
-const OLLAMA_URL   = (process.env.OLLAMA_URL   || 'http://localhost:11434/api/chat').trim();
-const OLLAMA_MODEL = (process.env.OLLAMA_MODEL || 'mistral').trim();
+const OLLAMA_URL   = (process.env.OLLAMA_URL   || 'https://ecodive.duckdns.org/api/chat').trim();
+const OLLAMA_MODEL = (process.env.OLLAMA_MODEL || 'mistral:7b-instruct-q4_K_M').trim();
 
 const DIVING_SYSTEM_PROMPT = `
 You are "Dive AI" — a scuba-diving assistant.
