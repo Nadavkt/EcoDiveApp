@@ -1,13 +1,20 @@
-// routes/ai.js — Ollama version (CommonJS, fixed)
+// routes/ai.js — Multi-provider AI (Ollama, Groq, OpenAI)
 const express = require('express');
 const router = express.Router();
 
-// ENV
-// OLLAMA_URL   e.g. http://localhost:11434/api/chat   (or https://ollama.yourdomain.com/api/chat)
-// OLLAMA_MODEL e.g. mistral / llama3 / llama3.1:8b-instruct / qwen2.5, etc.
-// OLLAMA_BASIC_AUTH (optional) base64 "user:pass" if you protected the proxy with Basic Auth
-const OLLAMA_URL   = (process.env.OLLAMA_URL   || 'https://ecodive.duckdns.org/api/chat').trim();
+// ENV Configuration
+// AI_PROVIDER: 'ollama', 'groq', or 'openai' (default: 'groq')
+// For Ollama:
+//   OLLAMA_URL, OLLAMA_MODEL, OLLAMA_BASIC_AUTH
+// For Groq (free):
+//   GROQ_API_KEY (get from https://console.groq.com)
+// For OpenAI:
+//   OPENAI_API_KEY
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'groq').trim().toLowerCase();
+const OLLAMA_URL = (process.env.OLLAMA_URL || 'https://ecodive.duckdns.org/api/chat').trim();
 const OLLAMA_MODEL = (process.env.OLLAMA_MODEL || 'mistral:7b-instruct-q4_K_M').trim();
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 const DIVING_SYSTEM_PROMPT = `
 You are "Dive AI" — a scuba-diving assistant.
@@ -16,9 +23,81 @@ Avoid long explanations. Be concise and practical.
 `.trim();
 
 /**
+ * Call Groq AI (OpenAI-compatible, free and fast)
+ */
+async function callGroq(messages, signal) {
+  if (!GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY not configured. Get one from https://console.groq.com');
+  }
+
+  const payload = {
+    model: 'llama-3.1-8b-instant', // Fast and free
+    messages: [{ role: 'system', content: DIVING_SYSTEM_PROMPT }, ...messages],
+    temperature: 0.2,
+    max_tokens: 500
+  };
+
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify(payload),
+    signal
+  });
+
+  if (!r.ok) {
+    const error = await r.text();
+    console.error('Groq error', r.status, error);
+    throw new Error(`Groq error ${r.status}: ${error || 'Unknown'}`);
+  }
+
+  const data = await r.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  if (!text.trim()) throw new Error('Empty response from Groq');
+  return text.trim();
+}
+
+/**
+ * Call OpenAI
+ */
+async function callOpenAI(messages, signal) {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not configured');
+  }
+
+  const payload = {
+    model: 'gpt-3.5-turbo',
+    messages: [{ role: 'system', content: DIVING_SYSTEM_PROMPT }, ...messages],
+    temperature: 0.2,
+    max_tokens: 500
+  };
+
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify(payload),
+    signal
+  });
+
+  if (!r.ok) {
+    const error = await r.text();
+    console.error('OpenAI error', r.status, error);
+    throw new Error(`OpenAI error ${r.status}: ${error || 'Unknown'}`);
+  }
+
+  const data = await r.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  if (!text.trim()) throw new Error('Empty response from OpenAI');
+  return text.trim();
+}
+
+/**
  * Call Ollama chat API (expects OpenAI-style messages)
- * @param {Array<{role:'system'|'user'|'assistant', content:string}>} messages
- * @param {AbortSignal} signal
  */
 async function callOllama(messages, signal) {
   const headers = { 'Content-Type': 'application/json' };
@@ -48,10 +127,6 @@ async function callOllama(messages, signal) {
     throw new Error(`Ollama error ${r.status}: ${raw || 'Unknown'}`);
   }
 
-  // Common shapes:
-  // { message: { role, content }, ... }
-  // or { choices: [{ message: { content } }] }
-  // or { response: "..." } for some gateways
   let data;
   try {
     data = JSON.parse(raw);
@@ -62,11 +137,26 @@ async function callOllama(messages, signal) {
   const text =
     (data && data.message && data.message.content) ||
     (data && Array.isArray(data.choices) && data.choices[0]?.message?.content) ||
-    data?.response || // some proxies
-    '';
+    data?.response || '';
 
   if (!String(text).trim()) throw new Error('Empty response from Ollama');
   return String(text).trim();
+}
+
+/**
+ * Route to the appropriate AI provider
+ */
+async function callAI(messages, signal) {
+  switch (AI_PROVIDER) {
+    case 'groq':
+      return await callGroq(messages, signal);
+    case 'openai':
+      return await callOpenAI(messages, signal);
+    case 'ollama':
+      return await callOllama(messages, signal);
+    default:
+      throw new Error(`Unknown AI_PROVIDER: ${AI_PROVIDER}`);
+  }
 }
 
 // POST /ai/chat  { messages: [{role, content}] }
@@ -80,7 +170,8 @@ router.post('/ai/chat', async (req, res) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
-    const reply = await callOllama(messages, controller.signal);
+    console.log(`Using AI provider: ${AI_PROVIDER}`);
+    const reply = await callAI(messages, controller.signal);
 
     clearTimeout(timeoutId);
     res.json({ success: true, reply });
