@@ -87,6 +87,9 @@ export default function Profile() {
         <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
           <Text style={[styles.actionText, { color: '#E11D48' }]}>Log Out</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('/(tabs)/More/Delete-Account')}>
+          <Text style={[styles.actionText, { color: '#E11D48', fontWeight: '800' }]}>Delete Account</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

@@ -12,18 +12,24 @@ console.log('========================');
 
 async function requestJson(path, options = {}) {
   const url = `${BASE_URL}${path}`;
-  console.log('Making request to:', url, 'with options:', options);
+  console.log('Making request to:', url, 'with method:', options.method || 'GET');
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
   
   try {
-    const res = await fetch(url, {
-      method: 'GET',
+    const fetchOptions = {
+      method: options.method || 'GET',
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       signal: controller.signal,
-      ...options
-    });
+    };
+    
+    // Only add body if provided and method supports it
+    if (options.body && options.method !== 'GET' && options.method !== 'HEAD') {
+      fetchOptions.body = options.body;
+    }
+    
+    const res = await fetch(url, fetchOptions);
     
     clearTimeout(timeoutId);
     console.log('Response status:', res.status);
@@ -126,6 +132,13 @@ export async function createDive(payload) {
   });
 }
 
+export async function deleteAccount(userId, idNumber) {
+  return requestJson(`/users/${userId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ idNumber })
+  });
+}
+
 export const API_BASE_URL = BASE_URL;
 
 export default {
@@ -133,7 +146,8 @@ export default {
   sendRegistrationEmail,
   loginUser,
   getUserDives,
-  createDive
+  createDive,
+  deleteAccount
 };
 
 

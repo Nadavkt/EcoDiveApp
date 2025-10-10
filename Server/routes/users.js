@@ -88,7 +88,91 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
+// DELETE /users/:id - delete a user account and all associated data
+// Requires idNumber in request body for verification
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { idNumber } = req.body;
+    
+    // Validate that idNumber is provided
+    if (!idNumber) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'ID number is required for account deletion' 
+      });
+    }
+    
+    // First, verify that the provided ID number matches the user's account
+    const userCheck = await pool.query(
+      'SELECT id, id_number FROM users WHERE id = $1',
+      [id]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found' 
+      });
+    }
+    
+    // Verify ID number matches
+    if (userCheck.rows[0].id_number !== idNumber) {
+      console.log(`Delete attempt failed: ID number mismatch for user ${id}`);
+      return res.status(403).json({ 
+        success: false, 
+        error: 'ID number does not match. Account deletion denied.' 
+      });
+    }
+    
+    // Begin transaction to ensure all deletions happen together
+    await pool.query('BEGIN');
+    
+    try {
+      // Delete user's dives first (foreign key constraint)
+      await pool.query('DELETE FROM dives WHERE user_id = $1', [id]);
+      
+      // Anonymize user's reviews instead of deleting them (keep valuable content)
+      // Set user_id to NULL and user_name to 'Anonymous' to make them anonymous
+      const reviewsResult = await pool.query(
+        `UPDATE reviews 
+         SET user_id = NULL, 
+             user_name = 'Anonymous User' 
+         WHERE user_id = $1 
+         RETURNING review_id`,
+        [id]
+      );
+      const anonymizedReviews = reviewsResult.rows.length;
+      
+      // Delete the user
+      const result = await pool.query(
+        'DELETE FROM users WHERE id = $1 RETURNING id',
+        [id]
+      );
+      
+      if (result.rows.length === 0) {
+        await pool.query('ROLLBACK');
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      
+      // Commit transaction
+      await pool.query('COMMIT');
+      
+      console.log(`User ${id} (ID number: ${idNumber}) deleted successfully. ${anonymizedReviews} reviews anonymized.`);
+      res.json({ 
+        success: true, 
+        message: 'Account deleted successfully. Your reviews have been anonymized and preserved.' 
+      });
+    } catch (err) {
+      // Rollback on error
+      await pool.query('ROLLBACK');
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete account' });
+  }
+});
 
 // Base64 upload helper endpoint - saves images/documents under /uploads and returns URLs
 router.post('/users/:id/upload', async (req, res) => {
@@ -143,4 +227,4 @@ router.post('/users/:id/upload', async (req, res) => {
   }
 });
 
-
+module.exports = router;

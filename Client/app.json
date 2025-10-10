@@ -14,7 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.nadav.ecodive",
       "buildNumber": "1",
       "deploymentTarget": "13.4",
