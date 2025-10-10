@@ -1,14 +1,9 @@
 const express = require('express');
-const { Pool } = require('pg');
+const { getPool } = require('../db');
 const router = express.Router();
 
 // Database connection
-const connectionString = process.env.DATABASE_URL;
-const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1') || !connectionString;
-const pool = new Pool({
-  connectionString,
-  ssl: isLocal ? false : { rejectUnauthorized: false },
-});
+const pool = getPool();
 
 // GET /dive-clubs - Get all dive clubs
 router.get('/dive-clubs', async (req, res) => {
