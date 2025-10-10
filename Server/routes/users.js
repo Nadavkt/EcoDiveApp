@@ -105,7 +105,7 @@ router.delete('/users/:id', async (req, res) => {
     
     // First, verify that the provided ID number matches the user's account
     const userCheck = await pool.query(
-      'SELECT id, id_number FROM users WHERE id = $1',
+      'SELECT id, id_number, first_name, last_name FROM users WHERE id = $1',
       [id]
     );
     
@@ -116,8 +116,10 @@ router.delete('/users/:id', async (req, res) => {
       });
     }
     
+    const user = userCheck.rows[0];
+    
     // Verify ID number matches
-    if (userCheck.rows[0].id_number !== idNumber) {
+    if (user.id_number !== idNumber) {
       console.log(`Delete attempt failed: ID number mismatch for user ${id}`);
       return res.status(403).json({ 
         success: false, 
@@ -133,16 +135,21 @@ router.delete('/users/:id', async (req, res) => {
       await pool.query('DELETE FROM dives WHERE user_id = $1', [id]);
       
       // Anonymize user's reviews instead of deleting them (keep valuable content)
-      // Set user_id to NULL and user_name to 'Anonymous' to make them anonymous
-      const reviewsResult = await pool.query(
-        `UPDATE reviews 
-         SET user_id = NULL, 
-             user_name = 'Anonymous User' 
-         WHERE user_id = $1 
-         RETURNING review_id`,
-        [id]
-      );
-      const anonymizedReviews = reviewsResult.rows.length;
+      // Note: The reviews table doesn't have user_id, it uses user_name directly
+      // We'll match by constructing the user's full name and anonymize those reviews
+      const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      
+      let anonymizedReviews = 0;
+      if (userName) {
+        const reviewsResult = await pool.query(
+          `UPDATE reviews 
+           SET user_name = 'Anonymous User' 
+           WHERE user_name = $1 
+           RETURNING review_id`,
+          [userName]
+        );
+        anonymizedReviews = reviewsResult.rows.length;
+      }
       
       // Delete the user
       const result = await pool.query(
